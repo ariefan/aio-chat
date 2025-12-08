@@ -6,14 +6,12 @@ import {
   MessageCircle,
   User,
   Bot,
-  RefreshCw,
   Clock,
   CheckCircle,
-  XCircle,
-  Send,
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { id as idLocale } from 'date-fns/locale'
+import { DashboardLayout } from '@/components/dashboard/layout'
 
 interface Message {
   id: string
@@ -99,7 +97,7 @@ export default function ConversationsPage() {
       if (selectedConversation) {
         fetchConversationDetail(selectedConversation.id)
       }
-    }, 5000) // Refresh every 5 seconds
+    }, 5000)
 
     return () => clearInterval(interval)
   }, [autoRefresh, selectedConversation?.id])
@@ -136,32 +134,24 @@ export default function ConversationsPage() {
   }
 
   return (
-    <div className="p-6 h-[calc(100vh-100px)]">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold">Live Conversations</h1>
-          <p className="text-muted-foreground">
-            Monitor percakapan RICH dengan peserta BPJS
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={autoRefresh}
-              onChange={(e) => setAutoRefresh(e.target.checked)}
-              className="rounded"
-            />
-            Auto-refresh
-          </label>
-          <Button variant="outline" onClick={fetchConversations}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
+    <DashboardLayout
+      title="Percakapan"
+      subtitle="Monitor percakapan RICH dengan peserta BPJS"
+      onRefresh={fetchConversations}
+      loading={loading}
+      actions={
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={autoRefresh}
+            onChange={(e) => setAutoRefresh(e.target.checked)}
+            className="rounded"
+          />
+          Auto-refresh
+        </label>
+      }
+    >
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-220px)]">
         {/* Conversations List */}
         <Card className="lg:col-span-1 overflow-hidden flex flex-col">
           <CardHeader className="py-3 border-b">
@@ -297,7 +287,7 @@ export default function ConversationsPage() {
                           locale: idLocale,
                         })}
                         {msg.metadata?.verified && (
-                          <span className="ml-2">✅ Terverifikasi</span>
+                          <span className="ml-2">Terverifikasi</span>
                         )}
                       </div>
                     </div>
@@ -313,7 +303,7 @@ export default function ConversationsPage() {
             <div className="border-t p-3 bg-gray-50 text-sm text-muted-foreground">
               <div className="flex items-center justify-between">
                 <span>
-                  Platform: {selectedConversation.user?.platformType?.toUpperCase()} •
+                  Platform: {selectedConversation.user?.platformType?.toUpperCase()} |
                   ID: {selectedConversation.user?.platformId}
                 </span>
                 <span>
@@ -324,6 +314,6 @@ export default function ConversationsPage() {
           )}
         </Card>
       </div>
-    </div>
+    </DashboardLayout>
   )
 }
