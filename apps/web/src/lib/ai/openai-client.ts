@@ -1,10 +1,17 @@
 import OpenAI from 'openai'
 
-// OpenAI client configuration
-const openaiClient = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  timeout: 30000, // 30 seconds timeout
-})
+// Lazy-initialized OpenAI client (prevents build-time errors)
+let _openaiClient: OpenAI | null = null
+
+function getOpenAIClient(): OpenAI {
+  if (!_openaiClient) {
+    _openaiClient = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+      timeout: 30000, // 30 seconds timeout
+    })
+  }
+  return _openaiClient
+}
 
 // Models configuration
 export const AI_MODELS = {
@@ -85,7 +92,7 @@ export interface RetrievedDocument {
  */
 export async function generateEmbeddings(texts: string[]): Promise<EmbeddingResult[]> {
   try {
-    const response = await openaiClient.embeddings.create({
+    const response = await getOpenAIClient().embeddings.create({
       model: AI_MODELS.EMBEDDING,
       input: texts,
       encoding_format: 'float',
@@ -165,7 +172,7 @@ export async function generateChatCompletion(
     // Add the current user message
     messages.push({ role: 'user', content: userMessage })
 
-    const response = await openaiClient.chat.completions.create({
+    const response = await getOpenAIClient().chat.completions.create({
       model,
       messages,
       temperature,
@@ -241,7 +248,7 @@ export async function generateStreamingChatCompletion(
     // Add the current user message
     messages.push({ role: 'user', content: userMessage })
 
-    const stream = await openaiClient.chat.completions.create({
+    const stream = await getOpenAIClient().chat.completions.create({
       model,
       messages,
       temperature,
@@ -289,4 +296,4 @@ export function cosineSimilarity(vecA: number[], vecB: number[]): number {
   return dotProduct / (normA * normB)
 }
 
-export default openaiClient
+export default getOpenAIClient
