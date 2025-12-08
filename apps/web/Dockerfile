@@ -1,93 +1,87 @@
 # =============================================================================
-# AIO-CHAT POC - Next.js 16 Dockerfile
+# Jenny BPJS Chatbot POC - Next.js 16 Dockerfile
 # =============================================================================
 # Multi-stage build for optimized production deployment
+# Target: dokploy on genai.technosmart.id
 # =============================================================================
 
 # Base stage - Node.js with Alpine Linux
 FROM node:20-alpine AS base
-# Install dependencies only when needed
+RUN apk add --no-cache libc6-compat curl
+RUN corepack enable pnpm
+
+# Dependencies stage
 FROM base AS deps
-# Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
-RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Install dependencies based on the preferred package manager
-COPY package.json package-lock.json* pnpm-lock.yaml* ./
-RUN \
-  if [ -f pnpm-lock.yaml ]; then \
-    corepack enable pnpm && pnpm i --frozen-lockfile; \
-  elif [ -f package-lock.json ]; then \
-    npm ci; \
-  elif [ -f yarn.lock ]; then \
-    corepack enable yarn && yarn install --frozen-lockfile; \
-  else \
-    echo "Lockfile not found." && exit 1; \
-  fi
+# Copy workspace files
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY packages/eslint-config/package.json ./packages/eslint-config/
+COPY packages/typescript-config/package.json ./packages/typescript-config/
+COPY packages/ui/package.json ./packages/ui/
+COPY apps/web/package.json ./apps/web/
 
-# Rebuild the source code only when needed
+# Install dependencies
+RUN pnpm install --frozen-lockfile
+
+# Builder stage
 FROM base AS builder
 WORKDIR /app
+
+# Copy dependencies
 COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/packages/eslint-config/node_modules ./packages/eslint-config/node_modules
+COPY --from=deps /app/packages/typescript-config/node_modules ./packages/typescript-config/node_modules
+COPY --from=deps /app/packages/ui/node_modules ./packages/ui/node_modules
+COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
+
+# Copy source code
 COPY . .
 
-# Next.js collects completely anonymous telemetry data about general usage.
-# Learn more here: https://nextjs.org/telemetry
-# Uncomment the following line in case you want to disable telemetry during the build.
-# ENV NEXT_TELEMETRY_DISABLED 1
+# Disable telemetry
+ENV NEXT_TELEMETRY_DISABLED=1
 
 # Build the application
-RUN \
-  if [ -f pnpm-lock.yaml ]; then \
-    corepack enable pnpm && pnpm run build; \
-  else \
-    npm run build; \
-  fi
+WORKDIR /app/apps/web
+RUN pnpm build
 
-# Production image, copy all the files and run next
+# Production runner stage
 FROM base AS runner
 WORKDIR /app
 
-ENV NODE_ENV production
-# Uncomment the following line in case you want to disable telemetry during runtime.
-ENV NEXT_TELEMETRY_DISABLED 1
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 
+# Create non-root user
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Copy the built application
-COPY --from=builder /app/public ./public
-
-# Set the correct permission for prerender cache
-RUN mkdir .next
-RUN chown nextjs:nodejs .next
-
-# Automatically leverage output traces to reduce image size
-# https://nextjs.org/docs/advanced-features/output-file-tracing
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+# Copy built assets
+COPY --from=builder /app/apps/web/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./.next/static
 
 USER nextjs
 
-# Add health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
   CMD curl -f http://localhost:3000/api/health || exit 1
 
 EXPOSE 3000
 
-ENV PORT 3000
-ENV HOSTNAME "0.0.0.0"
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
 
 # Start the application
 CMD ["node", "server.js"]
 
 # =============================================================================
-# Build Arguments (optional customization)
+# Required Environment Variables (set in dokploy):
 # =============================================================================
-ARG NEXT_PUBLIC_APP_URL
-ARG DATABASE_URL
-ARG NEXTAUTH_SECRET
-
-ENV NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
-ENV DATABASE_URL=${DATABASE_URL}
-ENV NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+# DATABASE_URL - PostgreSQL connection string
+# NEXTAUTH_SECRET - Random secret for NextAuth
+# NEXTAUTH_URL - https://genai.technosmart.id
+# TELEGRAM_BOT_TOKEN - Telegram bot token from BotFather
+# OPENROUTER_API_KEY - OpenRouter API key for Gemma model
+# (Optional) TOGETHERAI_API_KEY - TogetherAI fallback
+# =============================================================================
