@@ -250,13 +250,13 @@ export default function ConversationsPage() {
                   <p>Pilih percakapan untuk melihat detail</p>
                 </div>
               </div>
-            ) : selectedConversation.messages?.length === 0 ? (
+            ) : !selectedConversation.messages?.length ? (
               <div className="h-full flex items-center justify-center text-muted-foreground">
                 <p>Belum ada pesan</p>
               </div>
             ) : (
               <>
-                {[...selectedConversation.messages].reverse().map((msg) => (
+                {[...(selectedConversation.messages || [])].reverse().map((msg) => (
                   <div
                     key={msg.id}
                     className={`flex ${
