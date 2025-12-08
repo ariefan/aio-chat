@@ -1,73 +1,37 @@
-# 🤖 AIO-CHAT - Conversational AI CRM POC
+# 🏥 Jenny - BPJS Kesehatan Debt Collection Chatbot
 
-> **All-in-one chatbot system for WhatsApp & Telegram with RAG personalization and automated debt collection**
+> **AI-powered chatbot for BPJS Kesehatan debt collection with proactive reminders via Telegram**
 
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue?logo=typescript)](https://www.typescriptlang.org/)
-[![Drizzle](https://img.shields.io/badge/Drizzle-ORM-3178c6?logo=drizzle-orm)](https://orm.drizzle.team/)
-[![shadcn/ui](https://img.shields.io/badge/shadcn%2Fui-000000?logo=shadcnui)](https://ui.shadcn.com/)
+[![Gemma](https://img.shields.io/badge/Gemma_3-4B-4285F4?logo=google)](https://ai.google.dev/gemma)
+[![Telegram](https://img.shields.io/badge/Telegram-Bot-26A5E4?logo=telegram)](https://telegram.org/)
 
 ## 📋 Overview
 
-**AIO-CHAT** is a Proof of Concept (POC) for an intelligent chatbot CRM system that:
+**Jenny** is a Proof of Concept chatbot for BPJS Kesehatan Indonesia that helps with:
 
-- 📱 **Multi-Platform Messaging**: WhatsApp Business API & Telegram Bot API integration
-- 🔐 **Platform Identity Verification**: Secure user recognition across platforms
-- 🧠 **RAG Personalization**: Context-aware responses using user data
-- 🤖 **Automated Workflows**: Scheduled reminders and conditional messaging
-- 📊 **Operator Console**: Human oversight and intervention capabilities
-- 💳 **Debt Collection Focus**: Specialized for health insurance payment recovery
+- 💬 **Debt Collection**: Friendly reminders for overdue BPJS payments
+- 🔐 **BPJS ID Verification**: Secure member verification via 13-digit BPJS number
+- 📊 **Debt Information**: Real-time debt lookup and payment status
+- ⏰ **Proactive Reminders**: Automated notifications before due dates
+- 📱 **Live Dashboard**: Monitor conversations in real-time
+- 🗣️ **Bahasa Indonesia**: Full Indonesian language support
 
-### Current Status: 🚧 Infrastructure Setup (5% Complete)
+### Status: ✅ POC Complete (100%)
 
-- ✅ Next.js 15 + shadcn/ui monorepo with Turborepo
-- ❌ Database not configured (Drizzle ORM + PostgreSQL needed)
-- ❌ Authentication not implemented
-- ❌ Messaging platforms not connected
+All core features implemented and ready for testing.
 
-## 🏗️ Architecture
+## 🎯 Key Features
 
-```mermaid
-graph TB
-    subgraph "Frontend (Next.js 16)"
-        UI[Operator Dashboard]
-        Chat[Chat Interface]
-    end
-
-    subgraph "Backend (API Routes)"
-        API[Core API]
-        Auth[NextAuth.js]
-        Webhooks[Message Webhooks]
-    end
-
-    subgraph "AI & RAG"
-        LLM[OpenAI GPT-4]
-        VectorDB[Pinecone]
-        Embeddings[Text Embeddings]
-    end
-
-    subgraph "Messaging Platforms"
-        WA[WhatsApp API]
-        TG[Telegram API]
-    end
-
-    subgraph "Database"
-        PG[(PostgreSQL)]
-        Redis[(Redis Cache)]
-    end
-
-    UI --> API
-    Chat --> API
-    API --> Auth
-    API --> Webhooks
-    Webhooks --> WA
-    Webhooks --> TG
-    API --> PG
-    API --> Redis
-    API --> LLM
-    LLM --> VectorDB
-    VectorDB --> Embeddings
-```
+| Feature | Description |
+|---------|-------------|
+| **Jenny AI** | Chatbot powered by Google Gemma 3 4B via OpenRouter |
+| **BPJS Verification** | Verify members by BPJS ID (13 digits) |
+| **Debt Lookup** | Display debt amounts, due dates, and late fees |
+| **Proactive Messages** | Auto-reminders at 7, 3, 1 days before due date |
+| **Live Monitoring** | Real-time conversation dashboard |
+| **Data Management** | CRUD interface for BPJS members and debts |
 
 ## 🚀 Quick Start
 
@@ -75,164 +39,188 @@ graph TB
 
 - Node.js 20+
 - PostgreSQL 14+
-- Redis (optional, for caching)
 - pnpm package manager
+- Telegram Bot Token (from @BotFather)
+- OpenRouter API Key
 
 ### Installation
 
-1. **Clone and install dependencies**:
 ```bash
+# Clone repository
 git clone <repository-url>
 cd aio-chat
+
+# Install dependencies
 pnpm install
-```
 
-2. **Environment setup**:
-```bash
-cp .env.example .env.local
-# Edit .env.local with your configuration
-```
+# Setup environment
+cp apps/web/.env.example apps/web/.env.local
+# Edit .env.local with your credentials
 
-3. **Database setup**:
-```bash
-# Install Drizzle CLI
-pnpm add -g drizzle-kit
+# Setup database
+cd apps/web
+pnpm db:push        # Create tables
+pnpm db:seed-bpjs   # Seed test data
 
-# Run database migrations
-pnpm db:push
-```
-
-4. **Start development server**:
-```bash
+# Start development server
 pnpm dev
 ```
 
-Visit `http://localhost:3000` to see the application.
+Visit `http://localhost:3000` to see the dashboard.
+
+### Setup Telegram Webhook
+
+```bash
+# Get webhook setup instructions
+curl http://localhost:3000/api/webhooks/telegram?set_webhook=1
+
+# Or manually set webhook
+curl "https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://your-domain.com/api/webhooks/telegram"
+```
+
+## 🔑 Environment Variables
+
+```env
+# Database
+DATABASE_URL=postgresql://user:pass@localhost:5432/aio_chat
+
+# NextAuth
+NEXTAUTH_SECRET=your-super-secret-key-32-chars-min
+NEXTAUTH_URL=http://localhost:3000
+
+# Telegram Bot
+TELEGRAM_BOT_TOKEN=123456789:ABCdefGHIjklMNOpqrsTUVwxyz
+
+# OpenRouter API (Primary)
+OPENROUTER_API_KEY=sk-or-v1-your-key
+OPENROUTER_MODEL=google/gemma-3-4b-it
+
+# TogetherAI (Fallback)
+TOGETHERAI_API_KEY=your-key
+TOGETHERAI_MODEL=google/gemma-2-9b-it
+
+# OpenAI (for RAG embeddings)
+OPENAI_API_KEY=sk-your-key
+```
 
 ## 📁 Project Structure
 
 ```
 aio-chat/
-├── apps/
-│   └── web/                    # Next.js 16 frontend application
+├── apps/web/
+│   ├── app/
+│   │   ├── api/bpjs/           # BPJS API endpoints
+│   │   ├── api/webhooks/       # Telegram webhook
+│   │   └── dashboard/          # Dashboard pages
+│   │       ├── bpjs/           # BPJS management
+│   │       ├── conversations/  # Live chat monitoring
+│   │       └── proactive/      # Proactive message testing
+│   └── src/
+│       ├── db/                 # Database schema & seeds
+│       └── lib/
+│           ├── ai/jenny-ai.ts  # Jenny AI client
+│           ├── messaging/      # Telegram adapter
+│           └── scheduler/      # Proactive scheduler
 ├── packages/
-│   ├── ui/                     # Shared shadcn/ui components
-│   ├── eslint-config/          # ESLint configuration
-│   └── typescript-config/      # TypeScript configuration
-├── docs/
-│   ├── FEATURES.md             # Detailed feature matrix
-│   ├── USER_STORIES.md         # User requirements (bilingual)
-│   └── TODO.md                 # POC roadmap & progress
-└── README.md                   # This file
+│   └── ui/                     # Shared UI components
+└── TODO.md                     # Progress tracking
+```
+
+## 🌐 API Endpoints
+
+### BPJS Members
+```
+GET    /api/bpjs/members          # List members
+POST   /api/bpjs/members          # Create member
+GET    /api/bpjs/members/:id      # Get member + debts
+PUT    /api/bpjs/members/:id      # Update member
+DELETE /api/bpjs/members/:id      # Delete member
+```
+
+### BPJS Debts
+```
+GET    /api/bpjs/debts            # List debts
+POST   /api/bpjs/debts            # Create debt
+PUT    /api/bpjs/debts/:id        # Update debt
+POST   /api/bpjs/debts/:id        # Record payment
+```
+
+### Proactive Messages
+```
+GET    /api/bpjs/proactive        # List messages
+POST   /api/bpjs/proactive        # Actions:
+       { action: 'run_scheduler' }      # Generate reminders
+       { action: 'send_pending' }       # Send pending messages
+       { action: 'trigger', memberId, messageType }  # Manual trigger
+```
+
+## 📊 Dashboard Pages
+
+| Page | URL | Description |
+|------|-----|-------------|
+| Main Dashboard | `/dashboard` | Overview metrics |
+| BPJS Management | `/dashboard/bpjs` | Manage members & debts |
+| Live Conversations | `/dashboard/conversations` | Monitor chats in real-time |
+| Proactive Testing | `/dashboard/proactive` | Test reminder system |
+
+## 🧪 Test Data
+
+After running `pnpm db:seed-bpjs`, you can test with these BPJS IDs:
+
+| BPJS ID | Name | Class | Status |
+|---------|------|-------|--------|
+| `0001234567890` | Budi Santoso | 1 | Has debt |
+| `0001234567891` | Siti Rahayu | 2 | Has debt |
+| `0001234567892` | Ahmad Wijaya | 3 | Has debt |
+| `0001234567893` | Dewi Lestari | 2 | Has debt |
+| `0001234567894` | Eko Prasetyo | 1 | Overdue |
+
+**Try chatting with Jenny on Telegram:**
+> "Halo, saya mau cek tunggakan BPJS"
+>
+> "Nomor BPJS saya 0001234567890"
+
+## 🚀 Deployment
+
+### Target
+- **Domain**: genai.technosmart.id
+- **Server**: 18.140.254.61:5252
+- **Platform**: Dokploy
+
+### Docker Build
+```bash
+# Build from project root
+docker build -f apps/web/Dockerfile -t jenny-bpjs .
+
+# Run with environment file
+docker run -p 3000:3000 --env-file apps/web/.env.local jenny-bpjs
 ```
 
 ## 🛠️ Tech Stack
 
-### Core Technologies
-
-- **Frontend**: Next.js 16, React 19, TypeScript
-- **UI Library**: shadcn/ui + Tailwind CSS
-- **Database**: PostgreSQL with Drizzle ORM
-- **Authentication**: NextAuth.js
-- **Real-time**: WebSocket / Server-Sent Events
-
-### AI & Integrations
-
-- **LLM**: OpenAI GPT-4
-- **Vector Database**: Pinecone
-- **Messaging**: WhatsApp Business API, Telegram Bot API
-- **Job Queue**: Bull Queue
-- **File Storage**: AWS S3
-
-### Development Tools
-
-- **Monorepo**: Turborepo
-- **Package Manager**: pnpm
-- **Linting**: ESLint + Prettier
-- **Testing**: Jest + Playwright (planned)
-
-## 📊 POC Roadmap
-
-### Phase 1: Foundation (Week 1-2) - 0%
-- [ ] Upgrade to Next.js 16
-- [ ] Setup PostgreSQL + Drizzle ORM
-- [ ] Implement NextAuth.js authentication
-- [ ] Create basic database schema
-
-### Phase 2: Basic Messaging (Week 3-4) - 0%
-- [ ] Telegram Bot API integration
-- [ ] Message storage and retrieval
-- [ ] Basic operator dashboard
-- [ ] Real-time conversation updates
-
-### Phase 3: RAG Implementation (Week 5-6) - 0%
-- [ ] OpenAI integration
-- [ ] Pinecone vector database setup
-- [ ] Document ingestion pipeline
-- [ ] Personalized responses
-
-### Phase 4: Automation (Week 7-8) - 0%
-- [ ] Scheduled reminders
-- [ ] Conditional rules engine
-- [ ] Broadcast campaigns
-- [ ] Debt collection flows
-
-### Phase 5: Operator Console (Week 9-10) - 0%
-- [ ] Dashboard overview
-- [ ] Conversation management
-- [ ] User management
-- [ ] System monitoring
+| Category | Technology |
+|----------|------------|
+| Framework | Next.js 16, React 19 |
+| Language | TypeScript 5.7 |
+| Database | PostgreSQL + Drizzle ORM |
+| AI Model | Google Gemma 3 4B (via OpenRouter) |
+| Messaging | Telegram Bot API |
+| UI | shadcn/ui + Tailwind CSS |
+| Auth | NextAuth.js |
+| Monorepo | Turborepo + pnpm |
 
 ## 📖 Documentation
 
-- **[`FEATURES.md`](./FEATURES.md)** - Comprehensive feature matrix with implementation status
-- **[`USER_STORIES.md`](./USER_STORIES.md)** - Bilingual user stories with technical notes
-- **[`TODO.md`](./TODO.md)** - Interactive POC roadmap with progress tracking
-- **[`TECHNICAL_ARCHITECTURE.md`](./TECHNICAL_ARCHITECTURE.md)** - System architecture and technical details
-
-## 🔧 Configuration
-
-### Required Environment Variables
-
-```env
-# Database
-DATABASE_URL=postgresql://user:password@localhost:5432/aio_chat
-REDIS_URL=redis://localhost:6379
-
-# Authentication
-NEXTAUTH_SECRET=your-secret-key
-NEXTAUTH_URL=http://localhost:3000
-
-# OpenAI
-OPENAI_API_KEY=sk-...
-
-# Pinecone
-PINECONE_API_KEY=...
-PINECONE_ENVIRONMENT=...
-
-# Messaging Platforms
-TELEGRAM_BOT_TOKEN=...
-WHATSAPP_PHONE_ID=...
-WHATSAPP_ACCESS_TOKEN=...
-```
-
-## 🤝 Contributing
-
-This is a POC project. Contributions are welcome but please follow the development roadmap defined in the documentation.
+- **[`TODO.md`](./TODO.md)** - Complete task checklist and progress
+- **[`FEATURES.md`](./FEATURES.md)** - Feature matrix
+- **[`ARCHITECTURE.md`](./ARCHITECTURE.md)** - System architecture
 
 ## 📄 License
 
-MIT License - see [LICENSE](LICENSE) for details.
-
-## 📞 Contact
-
-For questions about this POC:
-
-- Create an issue in the repository
-- Contact the development team
+MIT License
 
 ---
 
-**Status**: 🚧 Active Development - POC Phase
-**Last Updated**: December 6, 2025
-**Version**: 0.1.0 (Proof of Concept)
+**Status**: ✅ POC Complete
+**Last Updated**: December 8, 2024
+**Version**: 1.0.0 (Proof of Concept)

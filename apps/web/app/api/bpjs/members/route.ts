@@ -11,18 +11,15 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get('offset') || '0', 10)
     const search = searchParams.get('search') || ''
 
-    let query = db.select().from(bpjsMembers)
+    const query = db.select().from(bpjsMembers)
 
-    if (search) {
-      query = query.where(
-        sql`${bpjsMembers.name} ILIKE ${'%' + search + '%'} OR ${bpjsMembers.bpjsId} ILIKE ${'%' + search + '%'}`
-      )
-    }
+    const whereClause = search
+      ? sql`${bpjsMembers.name} ILIKE ${'%' + search + '%'} OR ${bpjsMembers.bpjsId} ILIKE ${'%' + search + '%'}`
+      : undefined
 
-    const members = await query
-      .orderBy(desc(bpjsMembers.createdAt))
-      .limit(limit)
-      .offset(offset)
+    const members = whereClause
+      ? await query.where(whereClause).orderBy(desc(bpjsMembers.createdAt)).limit(limit).offset(offset)
+      : await query.orderBy(desc(bpjsMembers.createdAt)).limit(limit).offset(offset)
 
     // Get debt summary for each member
     const membersWithDebt = await Promise.all(
