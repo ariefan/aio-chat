@@ -205,7 +205,7 @@ export default function ConversationsPage() {
                           })
                         : 'Tidak ada pesan'}
                     </div>
-                    {conv.messages?.[0] && (
+                    {conv.messages?.[0]?.content && (
                       <p className="mt-1 text-sm text-muted-foreground truncate">
                         {conv.messages[0].direction === 'outbound' ? '🤖 ' : ''}
                         {conv.messages[0].content.slice(0, 50)}...
