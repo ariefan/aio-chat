@@ -291,7 +291,7 @@ export default function DashboardPage() {
                               <Button variant="ghost" size="sm" onClick={() => router.push(`/dashboard/members/${member.id}`)}>
                                 <Eye className="h-4 w-4" />
                               </Button>
-                              <Button variant="ghost" size="sm" onClick={() => alert('Fitur edit belum tersedia di POC')}>
+                              <Button variant="ghost" size="sm" onClick={() => router.push(`/dashboard/members/${member.id}/edit`)}>
                                 <Edit className="h-4 w-4" />
                               </Button>
                             </div>
