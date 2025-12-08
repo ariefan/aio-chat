@@ -14,7 +14,6 @@ import {
   Shield,
   TrendingUp
 } from 'lucide-react'
-import { ChonkDetector } from '@/components/security/chonk-detector'
 
 interface SystemStats {
   totalConversations: number
@@ -365,64 +364,6 @@ export default function Page() {
           </Card>
         </div>
 
-        {/* Features Overview */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Platform Capabilities</CardTitle>
-            <CardDescription>
-              Your AIO-Chat platform is equipped with enterprise-grade features
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-              <div className="flex items-start gap-3">
-                <div className="w-2 h-2 rounded-full bg-blue-500 mt-2" />
-                <div>
-                  <div className="font-semibold">Multi-Platform Support</div>
-                  <div className="text-muted-foreground">WhatsApp, Telegram, Web Chat, Email</div>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-2 h-2 rounded-full bg-green-500 mt-2" />
-                <div>
-                  <div className="font-semibold">AI-Powered Responses</div>
-                  <div className="text-muted-foreground">RAG-enabled contextual conversations</div>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-2 h-2 rounded-full bg-purple-500 mt-2" />
-                <div>
-                  <div className="font-semibold">Smart Automation</div>
-                  <div className="text-muted-foreground">Rule-based workflows and triggers</div>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-2 h-2 rounded-full bg-orange-500 mt-2" />
-                <div>
-                  <div className="font-semibold">Real-Time Analytics</div>
-                  <div className="text-muted-foreground">Performance monitoring and insights</div>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-2 h-2 rounded-full bg-red-500 mt-2" />
-                <div>
-                  <div className="font-semibold">Enterprise Security</div>
-                  <div className="text-muted-foreground">Role-based access and audit logs</div>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <div className="w-2 h-2 rounded-full bg-yellow-500 mt-2" />
-                <div>
-                  <div className="font-semibold">Developer APIs</div>
-                  <div className="text-muted-foreground">RESTful APIs and webhooks</div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* 🛡️ CRITICAL: Orange Chonk Defense System */}
-        <ChonkDetector />
       </div>
     </div>
   )
