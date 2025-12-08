@@ -94,7 +94,8 @@ export default function EditMemberPage() {
   const handleDebtChange = (index: number, field: keyof EditableDebt, value: any) => {
     setDebts(prev => {
       const updated = [...prev]
-      updated[index] = { ...updated[index], [field]: value, isModified: true }
+      const currentDebt = updated[index]!
+      updated[index] = { ...currentDebt, [field]: value, isModified: true } as EditableDebt
       return updated
     })
     setError(null)
@@ -121,12 +122,13 @@ export default function EditMemberPage() {
   const deleteDebt = (index: number) => {
     setDebts(prev => {
       const updated = [...prev]
-      if (updated[index].isNew) {
+      const currentDebt = updated[index]!
+      if (currentDebt.isNew) {
         // Remove new debt completely
         return updated.filter((_, i) => i !== index)
       } else {
         // Mark existing debt for deletion
-        updated[index] = { ...updated[index], isDeleted: true }
+        updated[index] = { ...currentDebt, isDeleted: true } as EditableDebt
         return updated
       }
     })
@@ -135,7 +137,8 @@ export default function EditMemberPage() {
   const restoreDebt = (index: number) => {
     setDebts(prev => {
       const updated = [...prev]
-      updated[index] = { ...updated[index], isDeleted: false }
+      const currentDebt = updated[index]!
+      updated[index] = { ...currentDebt, isDeleted: false } as EditableDebt
       return updated
     })
   }

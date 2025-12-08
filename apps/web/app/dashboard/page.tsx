@@ -139,11 +139,13 @@ export default function DashboardPage() {
     const lines = text.split('\n').filter(line => line.trim())
     if (lines.length < 2) return []
 
-    const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/['"]/g, ''))
+    const headerLine = lines[0]!
+    const headers = headerLine.split(',').map(h => h.trim().toLowerCase().replace(/['"]/g, ''))
     const data = []
 
     for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(',').map(v => v.trim().replace(/['"]/g, ''))
+      const line = lines[i]!
+      const values = line.split(',').map(v => v.trim().replace(/['"]/g, ''))
       const row: any = {}
 
       headers.forEach((header, idx) => {

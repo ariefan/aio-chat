@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { eq } from 'drizzle-orm'
 import { db } from '@/db'
 import { bpjsMembers } from '@/db/schema'
 
@@ -60,7 +61,7 @@ export async function POST(request: NextRequest) {
               status: (row.status as any) || 'active',
               updatedAt: new Date()
             })
-            .where((members, { eq }) => eq(members.bpjsId, row.bpjsId))
+            .where(eq(bpjsMembers.bpjsId, row.bpjsId))
 
           results.success++
         } else {
