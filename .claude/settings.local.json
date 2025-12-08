@@ -5,7 +5,11 @@
       "Bash(cat:*)",
       "Bash(scp:*)",
       "Bash(DATABASE_URL=\"postgresql://dokploy:amukds4wi9001583845717ad2@localhost:5555/aio-chat\" pnpm db:push:*)",
-      "Bash(DATABASE_URL=\"postgresql://postgres:postgres@localhost:5432/aio-chat\" pnpm build:*)"
+      "Bash(DATABASE_URL=\"postgresql://postgres:postgres@localhost:5432/aio-chat\" pnpm build:*)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:postgres@localhost:5432/aio-chat\" pnpm drizzle-kit:*)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:postgres@localhost:5432/aio-chat\" pnpm drizzle-kit push:*)",
+      "Bash(git reset:*)",
+      "WebFetch(domain:genai.technosmart.id)"
     ],
     "deny": [],
     "ask": []

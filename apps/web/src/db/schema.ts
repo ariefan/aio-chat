@@ -416,6 +416,17 @@ export const ragSearchLogs = createTable('rag_search_logs', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 })
 
+// Application Settings Table
+export const appSettings = createTable('app_settings', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  key: varchar('key', { length: 100 }).notNull().unique(),
+  value: text('value').notNull(),
+  description: text('description'),
+  category: varchar('category', { length: 50 }).default('general'),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  updatedBy: uuid('updated_by'),
+})
+
 // Export types for use in the application
 export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert
@@ -459,3 +470,7 @@ export type BpjsPayment = typeof bpjsPayments.$inferSelect
 export type NewBpjsPayment = typeof bpjsPayments.$inferInsert
 export type ProactiveMessage = typeof proactiveMessages.$inferSelect
 export type NewProactiveMessage = typeof proactiveMessages.$inferInsert
+
+// Settings Types
+export type AppSetting = typeof appSettings.$inferSelect
+export type NewAppSetting = typeof appSettings.$inferInsert

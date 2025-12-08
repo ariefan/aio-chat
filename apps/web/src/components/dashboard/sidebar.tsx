@@ -19,7 +19,7 @@ const menuItems = [
   { icon: MessageCircle, label: 'Percakapan', href: '/dashboard/conversations' },
   { icon: Bot, label: 'Simulasi', href: '/dashboard/simulation' },
   { icon: FileText, label: 'Laporan', href: '/dashboard/reports', disabled: true },
-  { icon: Settings, label: 'Pengaturan', href: '/dashboard/settings', disabled: true },
+  { icon: Settings, label: 'Pengaturan', href: '/dashboard/settings' },
 ]
 
 export function DashboardSidebar() {

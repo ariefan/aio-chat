@@ -94,7 +94,7 @@ export default function ConversationsPage() {
 
     const interval = setInterval(() => {
       fetchConversations()
-      if (selectedConversation) {
+      if (selectedConversation?.id) {
         fetchConversationDetail(selectedConversation.id)
       }
     }, 5000)
