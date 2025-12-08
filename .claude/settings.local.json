@@ -1,0 +1,37 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls:*)",
+      "Bash(pnpm install:*)",
+      "Bash(pnpm typecheck:*)",
+      "Bash(pnpm add:*)",
+      "Bash(pnpm db:push)",
+      "Bash(find:*)",
+      "Bash(node:*)",
+      "Bash(npx next build:*)",
+      "Bash(npx tsc:*)",
+      "Bash(pnpm build:*)",
+      "Bash(pnpm dev)",
+      "Bash(pnpm db:generate)",
+      "Bash(echo:*)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:postgres@localhost:5432/aio-chat\" pnpm:*)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:postgres@localhost:5432/aio-chat\" pnpm db:seed:*)",
+      "Bash(PGPASSWORD=postgres psql:*)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:postgres@localhost:5432/aio-chat\" node:*)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:postgres@localhost:5432/aio-chat\" tsx:*)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:postgres@localhost:5432/aio-chat\" pnpm next dev:*)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:postgres@localhost:5432/aio-chat\" pnpm tsx:*)",
+      "Bash(curl:*)",
+      "Bash(pnpm tsc:*)",
+      "Bash(rm:*)",
+      "Bash(npx eslint:*)",
+      "Bash(bun tsc --noEmit)",
+      "Bash(grep:*)",
+      "Bash(bun tsc:*)",
+      "Bash(tree:*)",
+      "Bash(cut:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

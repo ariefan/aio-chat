@@ -1,4 +1,26 @@
 {
-  "extends": "@workspace/typescript-config/base.json"
+  "extends": "@workspace/typescript-config/base.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "allowImportingTsExtensions": false,
+    "allowSyntheticDefaultImports": true,
+    "verbatimModuleSyntax": false,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["apps/web/src/*"],
+      "@/db/*": ["apps/web/src/db/*"],
+      "@/lib/*": ["apps/web/src/lib/*"],
+      "@/components/*": ["apps/web/src/components/*"],
+      "@/components/ui/*": ["packages/ui/src/*"],
+      "@workspace/ui/*": ["packages/ui/src/*"]
+    }
+  },
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build"
+  ]
 }
 

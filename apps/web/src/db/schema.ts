@@ -1,0 +1,343 @@
+import {
+  pgTable,
+  pgEnum,
+  serial,
+  text,
+  timestamp,
+  boolean,
+  jsonb,
+  varchar,
+  integer,
+  uuid,
+  pgTableCreator,
+} from 'drizzle-orm/pg-core'
+
+// Create a base table function for consistent table creation
+const createTable = pgTableCreator((name) => `aio_chat_${name}`)
+
+// Enums
+export const platformTypeEnum = pgEnum('platform_type', ['whatsapp', 'telegram'])
+export const messageDirectionEnum = pgEnum('message_direction', ['inbound', 'outbound'])
+export const messageStatusEnum = pgEnum('message_status', ['sent', 'delivered', 'read', 'failed'])
+export const userStatusEnum = pgEnum('user_status', ['pending', 'verified', 'active', 'inactive'])
+export const conversationStatusEnum = pgEnum('conversation_status', ['active', 'closed', 'archived'])
+export const operatorRoleEnum = pgEnum('operator_role', ['admin', 'operator'])
+
+// RAG Knowledge Base Enums
+export const documentTypeEnum = pgEnum('document_type', ['faq', 'policy', 'manual', 'procedure', 'general'])
+export const documentStatusEnum = pgEnum('document_status', ['draft', 'published', 'archived'])
+export const embeddingModelEnum = pgEnum('embedding_model', ['text-embedding-3-small', 'text-embedding-3-large', 'text-embedding-ada-002'])
+
+// Automation Rules Enums
+export const automationTriggerTypeEnum = pgEnum('automation_trigger_type', [
+  'keyword',
+  'time_based',
+  'message_count',
+  'user_status',
+  'conversation_inactive',
+  'escalation',
+  'custom_event'
+])
+
+export const automationActionTypeEnum = pgEnum('automation_action_type', [
+  'send_message',
+  'assign_to_operator',
+  'change_user_status',
+  'change_conversation_status',
+  'add_tag',
+  'send_email',
+  'create_task',
+  'escalate',
+  'webhook',
+  'ai_response',
+  'delay'
+])
+
+export const automationStatusEnum = pgEnum('automation_status', ['draft', 'active', 'paused', 'disabled'])
+
+// Users table - End users of the chatbot
+export const users = createTable('users', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  platformId: varchar('platform_id', { length: 255 }).notNull(),
+  platformType: platformTypeEnum('platform_type').notNull(),
+  status: userStatusEnum('user_status').default('pending'),
+  phone: varchar('phone', { length: 20 }),
+  email: varchar('email', { length: 255 }),
+  name: varchar('name', { length: 255 }),
+  metadata: jsonb('metadata'),
+  verifiedAt: timestamp('verified_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+})
+
+// Operators table - Internal users who manage the system
+export const operators = createTable('operators', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  email: varchar('email', { length: 255 }).notNull().unique(),
+  name: varchar('name', { length: 255 }).notNull(),
+  passwordHash: varchar('password_hash', { length: 255 }).notNull(),
+  role: operatorRoleEnum('role').default('operator'),
+  isActive: boolean('is_active').default(true),
+  lastLoginAt: timestamp('last_login_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+})
+
+// Conversations table
+export const conversations = createTable('conversations', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  assignedOperatorId: uuid('assigned_operator_id').references(() => operators.id),
+  status: conversationStatusEnum('status').default('active'),
+  metadata: jsonb('metadata'),
+  lastMessageAt: timestamp('last_message_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+})
+
+// Messages table
+export const messages = createTable('messages', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  conversationId: uuid('conversation_id').references(() => conversations.id, { onDelete: 'cascade' }).notNull(),
+  platformId: varchar('platform_id', { length: 255 }), // ID from external platform
+  direction: messageDirectionEnum('direction').notNull(),
+  content: text('content').notNull(),
+  messageType: varchar('message_type', { length: 50 }).default('text'),
+  status: messageStatusEnum('status').default('sent'),
+  metadata: jsonb('metadata'), // For media URLs, reactions, etc.
+  sentAt: timestamp('sent_at').defaultNow().notNull(),
+  deliveredAt: timestamp('delivered_at'),
+  readAt: timestamp('read_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+})
+
+// Scheduled messages table
+export const scheduledMessages = createTable('scheduled_messages', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  conversationId: uuid('conversation_id').references(() => conversations.id, { onDelete: 'cascade' }).notNull(),
+  content: text('content').notNull(),
+  scheduledAt: timestamp('scheduled_at').notNull(),
+  status: varchar('status', { length: 20 }).default('pending'), // pending, sent, failed, cancelled
+  metadata: jsonb('metadata'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+})
+
+// Enhanced Automation rules table
+export const automationRules = createTable('automation_rules', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  status: automationStatusEnum('status').default('draft'),
+  triggerType: automationTriggerTypeEnum('trigger_type').notNull(),
+  triggerConfig: jsonb('trigger_config').notNull(), // Detailed trigger configuration
+  actions: jsonb('actions').notNull(), // Array of actions to execute
+  conditions: jsonb('conditions'), // Additional conditions (optional)
+  priority: integer('priority').default(0),
+  maxExecutions: integer('max_executions'), // Maximum times rule can be executed
+  executionCount: integer('execution_count').default(0),
+  lastExecutedAt: timestamp('last_executed_at'),
+  cooldownMinutes: integer('cooldown_minutes').default(0), // Minimum time between executions
+  tags: varchar('tags', { length: 500 }), // Comma-separated tags for organization
+  metadata: jsonb('metadata'),
+  createdBy: uuid('created_by').references(() => operators.id),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+})
+
+// Message templates table
+export const messageTemplates = createTable('message_templates', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  content: text('content').notNull(),
+  variables: jsonb('variables'), // Array of variable names for template
+  category: varchar('category', { length: 100 }),
+  language: varchar('language', { length: 10 }).default('en'),
+  isActive: boolean('is_active').default(true),
+  createdBy: uuid('created_by').references(() => operators.id),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+})
+
+// Audit logs table
+export const auditLogs = createTable('audit_logs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  operatorId: uuid('operator_id').references(() => operators.id),
+  action: varchar('action', { length: 100 }).notNull(),
+  entityType: varchar('entity_type', { length: 100 }),
+  entityId: uuid('entity_id'),
+  oldValues: jsonb('old_values'),
+  newValues: jsonb('new_values'),
+  metadata: jsonb('metadata'),
+  ip: varchar('ip', { length: 45 }), // Supports IPv6
+  userAgent: text('user_agent'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+})
+
+// NextAuth.js tables for authentication
+export const accounts = createTable('accounts', {
+  userId: uuid('user_id')
+    .references(() => operators.id, { onDelete: 'cascade' })
+    .notNull(),
+  type: varchar('type', { length: 50 }).notNull(),
+  provider: varchar('provider', { length: 50 }).notNull(),
+  providerAccountId: varchar('provider_account_id', { length: 255 }).notNull(),
+  refresh_token: text('refresh_token'),
+  access_token: text('access_token'),
+  expires_at: integer('expires_at'),
+  token_type: varchar('token_type', { length: 50 }),
+  scope: varchar('scope', { length: 255 }),
+  id_token: text('id_token'),
+  session_state: varchar('session_state', { length: 255 }),
+})
+
+export const sessions = createTable('sessions', {
+  sessionToken: varchar('session_token', { length: 255 }).primaryKey(),
+  userId: uuid('user_id')
+    .references(() => operators.id, { onDelete: 'cascade' })
+    .notNull(),
+  expires: timestamp('expires', { mode: 'date' }).notNull(),
+})
+
+export const verificationTokens = createTable('verification_tokens', {
+  identifier: varchar('identifier', { length: 255 }).notNull(),
+  token: varchar('token', { length: 255 }).primaryKey(),
+  expires: timestamp('expires', { mode: 'date' }).notNull(),
+})
+
+// Automation execution logs
+export const automationExecutions = createTable('automation_executions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  ruleId: uuid('rule_id').references(() => automationRules.id, { onDelete: 'cascade' }).notNull(),
+  triggerType: automationTriggerTypeEnum('trigger_type').notNull(),
+  triggerData: jsonb('trigger_data').notNull(), // Data that triggered the rule
+  executedActions: jsonb('executed_actions').notNull(), // Actions that were executed
+  results: jsonb('results'), // Results of action execution
+  status: varchar('status', { length: 50 }).notNull(), // 'success', 'failed', 'partial'
+  errorMessage: text('error_message'),
+  executionTime: integer('execution_time'), // Execution time in milliseconds
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
+  conversationId: uuid('conversation_id').references(() => conversations.id, { onDelete: 'set null' }),
+  messageId: uuid('message_id').references(() => messages.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+})
+
+// Automation schedules (for time-based triggers)
+export const automationSchedules = createTable('automation_schedules', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  ruleId: uuid('rule_id').references(() => automationRules.id, { onDelete: 'cascade' }).notNull(),
+  scheduleType: varchar('schedule_type', { length: 50 }).notNull(), // 'cron', 'interval', 'once'
+  scheduleExpression: varchar('schedule_expression', { length: 255 }).notNull(), // Cron expression or interval
+  timezone: varchar('timezone', { length: 50 }).default('UTC'),
+  nextRunAt: timestamp('next_run_at'),
+  lastRunAt: timestamp('last_run_at'),
+  isActive: boolean('is_active').default(true),
+  runCount: integer('run_count').default(0),
+  metadata: jsonb('metadata'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+})
+
+// Knowledge Base Documents
+export const knowledgeDocuments = createTable('knowledge_documents', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  title: varchar('title', { length: 500 }).notNull(),
+  content: text('content').notNull(),
+  type: documentTypeEnum('document_type').default('general'),
+  status: documentStatusEnum('document_status').default('draft'),
+  category: varchar('category', { length: 100 }),
+  tags: varchar('tags', { length: 1000 }), // Comma-separated tags
+  metadata: jsonb('metadata'),
+  createdById: uuid('created_by').references(() => operators.id),
+  publishedAt: timestamp('published_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+})
+
+// Document Embeddings for Vector Search
+export const documentEmbeddings = createTable('document_embeddings', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  documentId: uuid('document_id').references(() => knowledgeDocuments.id, { onDelete: 'cascade' }).notNull(),
+  chunkIndex: integer('chunk_index').notNull(), // For long documents split into chunks
+  chunkText: text('chunk_text').notNull(),
+  embeddingModel: embeddingModelEnum('embedding_model').default('text-embedding-3-small'),
+  embedding: jsonb('embedding').notNull(), // Vector array as JSON
+  tokenCount: integer('token_count'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+})
+
+// AI Chat Sessions for tracking AI conversations
+export const aiChatSessions = createTable('ai_chat_sessions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }).notNull(),
+  platformType: platformTypeEnum('platform_type').notNull(),
+  sessionId: varchar('session_id', { length: 255 }).notNull(),
+  title: varchar('title', { length: 500 }),
+  context: jsonb('context'), // Conversation context/memory
+  metadata: jsonb('metadata'),
+  startedAt: timestamp('started_at').defaultNow().notNull(),
+  lastMessageAt: timestamp('last_message_at').defaultNow(),
+  endedAt: timestamp('ended_at'),
+})
+
+// AI Messages within AI Chat Sessions
+export const aiMessages = createTable('ai_messages', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  sessionId: uuid('session_id').references(() => aiChatSessions.id, { onDelete: 'cascade' }).notNull(),
+  role: varchar('role', { length: 20 }).notNull(), // 'user', 'assistant', 'system'
+  content: text('content').notNull(),
+  tokenCount: integer('token_count'),
+  modelUsed: varchar('model_used', { length: 100 }),
+  metadata: jsonb('metadata'),
+  retrievedDocuments: jsonb('retrieved_documents'), // Documents used for RAG
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+})
+
+// RAG Search Logs for analytics and improvement
+export const ragSearchLogs = createTable('rag_search_logs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  sessionId: uuid('session_id').references(() => aiChatSessions.id, { onDelete: 'cascade' }),
+  query: text('query').notNull(),
+  searchResults: jsonb('search_results').notNull(),
+  retrievedDocumentIds: jsonb('retrieved_document_ids'), // Array of document IDs used
+  relevanceScore: jsonb('relevance_score'), // Per-document relevance scores
+  responseGenerated: boolean('response_generated').default(false),
+  userFeedback: integer('user_feedback'), // 1-5 rating
+  processingTime: integer('processing_time'), // Milliseconds
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+})
+
+// Export types for use in the application
+export type User = typeof users.$inferSelect
+export type NewUser = typeof users.$inferInsert
+export type Operator = typeof operators.$inferSelect
+export type NewOperator = typeof operators.$inferInsert
+export type Conversation = typeof conversations.$inferSelect
+export type NewConversation = typeof conversations.$inferInsert
+export type Message = typeof messages.$inferSelect
+export type NewMessage = typeof messages.$inferInsert
+export type ScheduledMessage = typeof scheduledMessages.$inferSelect
+export type NewScheduledMessage = typeof scheduledMessages.$inferInsert
+export type AutomationRule = typeof automationRules.$inferSelect
+export type NewAutomationRule = typeof automationRules.$inferInsert
+export type AutomationExecution = typeof automationExecutions.$inferSelect
+export type NewAutomationExecution = typeof automationExecutions.$inferInsert
+export type AutomationSchedule = typeof automationSchedules.$inferSelect
+export type NewAutomationSchedule = typeof automationSchedules.$inferInsert
+export type MessageTemplate = typeof messageTemplates.$inferSelect
+export type NewMessageTemplate = typeof messageTemplates.$inferInsert
+export type AuditLog = typeof auditLogs.$inferSelect
+export type NewAuditLog = typeof auditLogs.$inferInsert
+
+// RAG Knowledge Base Types
+export type KnowledgeDocument = typeof knowledgeDocuments.$inferSelect
+export type NewKnowledgeDocument = typeof knowledgeDocuments.$inferInsert
+export type DocumentEmbedding = typeof documentEmbeddings.$inferSelect
+export type NewDocumentEmbedding = typeof documentEmbeddings.$inferInsert
+export type AiChatSession = typeof aiChatSessions.$inferSelect
+export type NewAiChatSession = typeof aiChatSessions.$inferInsert
+export type AiMessage = typeof aiMessages.$inferSelect
+export type NewAiMessage = typeof aiMessages.$inferInsert
+export type RagSearchLog = typeof ragSearchLogs.$inferSelect
+export type NewRagSearchLog = typeof ragSearchLogs.$inferInsert
