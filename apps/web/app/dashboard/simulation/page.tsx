@@ -5,14 +5,32 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { ProtectedRoute } from '@/components/protected-route'
 import { CustomerPanel } from '@/components/simulation/customer-panel'
 import { ChatInterface } from '@/components/simulation/chat-interface'
-import { Combobox, ComboboxOption } from '@workspace/ui/src/components/combobox'
 import { Button } from '@workspace/ui/src/components/button'
-import { ArrowLeft, LayoutDashboard, Smartphone, RefreshCw } from 'lucide-react'
+import { Badge } from '@workspace/ui/src/components/badge'
+import {
+  ArrowLeft,
+  LayoutDashboard,
+  Smartphone,
+  RefreshCw,
+  Search,
+  User,
+  AlertTriangle,
+  CreditCard,
+} from 'lucide-react'
 import { generateInitialReminder } from '@/lib/ai/simulation-ai'
 
 interface Message {
   role: 'user' | 'assistant' | 'system'
   content: string
+}
+
+interface MemberListItem {
+  id: string
+  bpjsId: string
+  name: string
+  memberClass: string
+  status: string
+  totalArrears?: number
 }
 
 interface SimulationData {
@@ -72,41 +90,45 @@ function SimulationPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const initialMemberId = searchParams.get('memberId') || ''
+
   const [selectedMemberId, setSelectedMemberId] = useState<string>(initialMemberId)
   const [memberData, setMemberData] = useState<SimulationData | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [viewMode, setViewMode] = useState<'dashboard' | 'customer'>('dashboard')
 
-  // Member search
-  const [memberOptions, setMemberOptions] = useState<ComboboxOption[]>([])
-  const [searchLoading, setSearchLoading] = useState(false)
+  // Member list state
+  const [members, setMembers] = useState<MemberListItem[]>([])
+  const [membersLoading, setMembersLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState('')
 
-  // Fetch members for dropdown
+  // Fetch members for list
   const fetchMembers = useCallback(async (search: string = '') => {
-    setSearchLoading(true)
+    setMembersLoading(true)
     try {
-      const res = await fetch(`/api/simulation/members?search=${encodeURIComponent(search)}&limit=20`)
+      const res = await fetch(`/api/simulation/members?search=${encodeURIComponent(search)}&limit=50`)
       if (res.ok) {
         const data = await res.json()
-        setMemberOptions(
-          data.map((m: any) => ({
-            value: m.id,
-            label: m.name,
-            sublabel: `${m.bpjsId} | Kelas ${m.memberClass}`,
-          }))
-        )
+        setMembers(data || [])
       }
     } catch (error) {
       console.error('Failed to fetch members:', error)
     }
-    setSearchLoading(false)
+    setMembersLoading(false)
   }, [])
 
   // Initial fetch
   useEffect(() => {
     fetchMembers()
   }, [fetchMembers])
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchMembers(searchQuery)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [searchQuery, fetchMembers])
 
   // Fetch member data when selected
   useEffect(() => {
@@ -183,6 +205,14 @@ function SimulationPageContent() {
     }
   }
 
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      minimumFractionDigits: 0,
+    }).format(amount)
+  }
+
   return (
     <ProtectedRoute>
       <div className="flex flex-col h-screen bg-slate-100">
@@ -193,22 +223,15 @@ function SimulationPageContent() {
             Kembali
           </Button>
 
-          <div className="flex-1 max-w-md">
-            <Combobox
-              options={memberOptions}
-              value={selectedMemberId}
-              onValueChange={setSelectedMemberId}
-              placeholder="Pilih Peserta BPJS..."
-              searchPlaceholder="Cari nama/BPJS ID..."
-              loading={searchLoading}
-              onSearch={fetchMembers}
-            />
+          <div className="flex-1">
+            <h1 className="text-lg font-semibold text-slate-800">Simulasi Penagihan PANDAWA</h1>
+            <p className="text-xs text-slate-500">Simulasi percakapan penagihan iuran BPJS</p>
           </div>
 
           {selectedMemberId && (
             <Button variant="outline" size="sm" onClick={handleReset}>
               <RefreshCw className="h-4 w-4 mr-2" />
-              Reset
+              Reset Chat
             </Button>
           )}
 
@@ -240,16 +263,94 @@ function SimulationPageContent() {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden flex">
+          {/* Left Sidebar - Member List */}
+          <div className="w-80 min-w-[320px] max-w-[400px] bg-white border-r flex flex-col">
+            {/* Search */}
+            <div className="p-3 border-b">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Cari nama atau No. BPJS..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 bg-slate-100 rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+            </div>
+
+            {/* Member List */}
+            <div className="flex-1 overflow-y-auto">
+              {membersLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <RefreshCw className="h-6 w-6 animate-spin text-slate-400" />
+                </div>
+              ) : members.length === 0 ? (
+                <div className="text-center py-8 text-slate-500">
+                  <User className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>Tidak ada peserta ditemukan</p>
+                </div>
+              ) : (
+                <div className="divide-y">
+                  {members.map((member) => (
+                    <div
+                      key={member.id}
+                      onClick={() => setSelectedMemberId(member.id)}
+                      className={`p-3 cursor-pointer transition-colors ${
+                        selectedMemberId === member.id
+                          ? 'bg-green-50 border-l-4 border-green-500'
+                          : 'hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center shrink-0">
+                          <User className="h-5 w-5 text-slate-500" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate">{member.name}</p>
+                          <p className="text-xs text-slate-500">{member.bpjsId}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge className="bg-slate-100 text-slate-700 text-[10px] px-1.5 py-0">
+                              Kelas {member.memberClass}
+                            </Badge>
+                            {member.status === 'inactive' && (
+                              <Badge className="bg-red-100 text-red-700 text-[10px] px-1.5 py-0">
+                                <AlertTriangle className="h-2.5 w-2.5 mr-0.5" />
+                                Nonaktif
+                              </Badge>
+                            )}
+                          </div>
+                          {member.totalArrears && member.totalArrears > 0 && (
+                            <div className="flex items-center gap-1 mt-1 text-[10px] text-red-600">
+                              <CreditCard className="h-3 w-3" />
+                              {formatCurrency(member.totalArrears)}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Stats */}
+            <div className="p-3 border-t bg-slate-50 text-xs text-slate-500">
+              Total: {members.length} peserta
+            </div>
+          </div>
+
+          {/* Right Content */}
           {viewMode === 'dashboard' ? (
-            // Dashboard View (Split View)
-            <div className="flex h-full">
-              {/* Sidebar - Customer Panel */}
-              <div className="w-80 min-w-[320px] max-w-[400px] h-full border-r border-slate-200 hidden md:block">
+            // Dashboard View (Customer Panel + Chat)
+            <div className="flex-1 flex h-full">
+              {/* Customer Panel */}
+              <div className="w-80 min-w-[320px] max-w-[400px] h-full border-r border-slate-200 hidden lg:block">
                 <CustomerPanel data={memberData} />
               </div>
 
-              {/* Main - Chat Interface */}
+              {/* Chat Interface */}
               <div className="flex-1 h-full">
                 {selectedMemberId ? (
                   <ChatInterface
@@ -263,7 +364,7 @@ function SimulationPageContent() {
                       <Smartphone size={48} className="mx-auto mb-4 opacity-50" />
                       <p className="text-lg font-medium">Simulasi Penagihan PANDAWA</p>
                       <p className="text-sm mt-2">
-                        Pilih peserta BPJS untuk memulai simulasi percakapan
+                        Pilih peserta BPJS dari daftar untuk memulai simulasi
                       </p>
                     </div>
                   </div>
@@ -273,7 +374,7 @@ function SimulationPageContent() {
           ) : (
             // Mobile Simulation View
             <div
-              className="w-full h-full flex items-center justify-center"
+              className="flex-1 flex items-center justify-center"
               style={{
                 backgroundImage:
                   "url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png')",
@@ -315,14 +416,16 @@ function SimulationPageContent() {
 
 export default function SimulationPage() {
   return (
-    <Suspense fallback={
-      <div className="flex h-screen items-center justify-center bg-slate-100">
-        <div className="text-center">
-          <RefreshCw className="h-8 w-8 animate-spin mx-auto text-green-600" />
-          <p className="mt-2 text-slate-600">Memuat simulasi...</p>
+    <Suspense
+      fallback={
+        <div className="flex h-screen items-center justify-center bg-slate-100">
+          <div className="text-center">
+            <RefreshCw className="h-8 w-8 animate-spin mx-auto text-green-600" />
+            <p className="mt-2 text-slate-600">Memuat simulasi...</p>
+          </div>
         </div>
-      </div>
-    }>
+      }
+    >
       <SimulationPageContent />
     </Suspense>
   )
