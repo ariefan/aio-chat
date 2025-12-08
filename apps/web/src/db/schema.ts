@@ -23,6 +23,10 @@ export const userStatusEnum = pgEnum('user_status', ['pending', 'verified', 'act
 export const conversationStatusEnum = pgEnum('conversation_status', ['active', 'closed', 'archived'])
 export const operatorRoleEnum = pgEnum('operator_role', ['admin', 'operator'])
 
+// BPJS Debt Enums
+export const bpjsDebtStatusEnum = pgEnum('bpjs_debt_status', ['active', 'partial', 'paid', 'overdue', 'written_off'])
+export const bpjsMemberStatusEnum = pgEnum('bpjs_member_status', ['active', 'inactive', 'suspended'])
+
 // RAG Knowledge Base Enums
 export const documentTypeEnum = pgEnum('document_type', ['faq', 'policy', 'manual', 'procedure', 'general'])
 export const documentStatusEnum = pgEnum('document_status', ['draft', 'published', 'archived'])
@@ -68,6 +72,71 @@ export const users = createTable('users', {
   verifiedAt: timestamp('verified_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow(),
+})
+
+// BPJS Members table - BPJS Kesehatan member data
+export const bpjsMembers = createTable('bpjs_members', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  bpjsId: varchar('bpjs_id', { length: 20 }).notNull().unique(), // BPJS member ID (NIK-based)
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }), // Link to chat user after verification
+  name: varchar('name', { length: 255 }).notNull(),
+  nik: varchar('nik', { length: 20 }).notNull(), // National ID
+  phone: varchar('phone', { length: 20 }),
+  email: varchar('email', { length: 255 }),
+  address: text('address'),
+  memberClass: varchar('member_class', { length: 10 }).default('3'), // Kelas 1, 2, 3
+  status: bpjsMemberStatusEnum('status').default('active'),
+  registeredAt: timestamp('registered_at'),
+  metadata: jsonb('metadata'), // Additional member data
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+})
+
+// BPJS Debt records - Debt/tunggakan information
+export const bpjsDebts = createTable('bpjs_debts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  memberId: uuid('member_id').references(() => bpjsMembers.id, { onDelete: 'cascade' }).notNull(),
+  periodMonth: integer('period_month').notNull(), // 1-12
+  periodYear: integer('period_year').notNull(),
+  amount: integer('amount').notNull(), // Amount in IDR (use integer for currency)
+  dueDate: timestamp('due_date').notNull(),
+  paidAmount: integer('paid_amount').default(0),
+  paidAt: timestamp('paid_at'),
+  status: bpjsDebtStatusEnum('status').default('active'),
+  lateFee: integer('late_fee').default(0), // Denda keterlambatan
+  description: text('description'),
+  metadata: jsonb('metadata'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+})
+
+// BPJS Payment history
+export const bpjsPayments = createTable('bpjs_payments', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  debtId: uuid('debt_id').references(() => bpjsDebts.id, { onDelete: 'cascade' }).notNull(),
+  memberId: uuid('member_id').references(() => bpjsMembers.id, { onDelete: 'cascade' }).notNull(),
+  amount: integer('amount').notNull(),
+  paymentMethod: varchar('payment_method', { length: 50 }), // bank_transfer, va, qris, etc.
+  paymentRef: varchar('payment_ref', { length: 100 }), // Transaction reference
+  status: varchar('status', { length: 20 }).default('pending'), // pending, success, failed
+  paidAt: timestamp('paid_at'),
+  metadata: jsonb('metadata'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+})
+
+// Proactive message queue - For due date reminders
+export const proactiveMessages = createTable('proactive_messages', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  memberId: uuid('member_id').references(() => bpjsMembers.id, { onDelete: 'cascade' }).notNull(),
+  userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }),
+  messageType: varchar('message_type', { length: 50 }).notNull(), // reminder_7d, reminder_3d, reminder_1d, overdue
+  scheduledAt: timestamp('scheduled_at').notNull(),
+  sentAt: timestamp('sent_at'),
+  content: text('content').notNull(),
+  status: varchar('status', { length: 20 }).default('pending'), // pending, sent, failed, cancelled
+  retryCount: integer('retry_count').default(0),
+  metadata: jsonb('metadata'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
 })
 
 // Operators table - Internal users who manage the system
@@ -341,3 +410,13 @@ export type AiMessage = typeof aiMessages.$inferSelect
 export type NewAiMessage = typeof aiMessages.$inferInsert
 export type RagSearchLog = typeof ragSearchLogs.$inferSelect
 export type NewRagSearchLog = typeof ragSearchLogs.$inferInsert
+
+// BPJS Types
+export type BpjsMember = typeof bpjsMembers.$inferSelect
+export type NewBpjsMember = typeof bpjsMembers.$inferInsert
+export type BpjsDebt = typeof bpjsDebts.$inferSelect
+export type NewBpjsDebt = typeof bpjsDebts.$inferInsert
+export type BpjsPayment = typeof bpjsPayments.$inferSelect
+export type NewBpjsPayment = typeof bpjsPayments.$inferInsert
+export type ProactiveMessage = typeof proactiveMessages.$inferSelect
+export type NewProactiveMessage = typeof proactiveMessages.$inferInsert

@@ -1,7 +1,8 @@
 import TelegramBot from 'node-telegram-bot-api'
 import { db } from '@/db'
-import { users, conversations, messages } from '@/db/schema'
-import { eq, and } from 'drizzle-orm'
+import { users, conversations, messages, aiMessages, aiChatSessions } from '@/db/schema'
+import { eq, and, desc } from 'drizzle-orm'
+import { handleJennyMessage, type JennyChatMessage } from '@/lib/ai/jenny-ai'
 
 export interface TelegramMessage {
   message_id: number
@@ -258,34 +259,57 @@ export class TelegramAdapter {
 
       console.log(`Stored Telegram message from ${userName}: ${content}`)
 
-      // Process message through automation engine
-      const { automationIntegration } = await import('@/lib/automation/integration')
-      const automationResults = await automationIntegration.processIncomingMessage({
-        message: content,
-        userId: userData.id,
+      // Get conversation history for context
+      const conversationHistory: JennyChatMessage[] = []
+      try {
+        const recentMessages = await db
+          .select()
+          .from(messages)
+          .where(eq(messages.conversationId, conversationData.id))
+          .orderBy(desc(messages.sentAt))
+          .limit(10)
+
+        // Reverse to get chronological order
+        for (const msg of recentMessages.reverse()) {
+          conversationHistory.push({
+            role: msg.direction === 'inbound' ? 'user' : 'assistant',
+            content: msg.content,
+          })
+        }
+      } catch (historyError) {
+        console.error('Failed to fetch conversation history:', historyError)
+      }
+
+      // Process message through Jenny AI
+      console.log(`🤖 Processing message through Jenny AI for ${userName}`)
+      const jennyResult = await handleJennyMessage(
+        content,
+        userData.id,
+        'telegram',
+        conversationHistory
+      )
+
+      // Send Jenny's response
+      await this.sendMessage(message.chat.id, jennyResult.response, { parse_mode: 'Markdown' })
+
+      // Store outbound message
+      await db.insert(messages).values({
         conversationId: conversationData.id,
-        messageId: insertedMessage?.id || '',
-        platformType: 'telegram',
-        userName,
+        direction: 'outbound',
+        content: jennyResult.response,
+        messageType: 'text',
+        metadata: {
+          ai: true,
+          verified: jennyResult.verified,
+          memberInfo: jennyResult.memberInfo ? {
+            bpjsId: jennyResult.memberInfo.bpjsId,
+            name: jennyResult.memberInfo.name,
+          } : null,
+        },
+        sentAt: new Date(),
       })
 
-      // Only send auto-reply if no automation rules were executed
-      if (automationResults.length === 0) {
-        if (userData.status === 'pending') {
-          await this.sendMessage(
-            message.chat.id,
-            `Hello ${userName}! 👋\n\nThank you for contacting AIO-CHAT.\n\nI can help you with:\n• Policy information\n• Payment status\n• General inquiries\n\nPlease let me know how I can assist you today!`
-          )
-        } else if (userData.status === 'verified' || userData.status === 'active') {
-          // Simple acknowledgment for verified users
-          await this.sendMessage(
-            message.chat.id,
-            `✅ Message received: "${content}"\n\nI'll get back to you shortly with the information you need.`
-          )
-        }
-      } else {
-        console.log(`🤖 Automation executed ${automationResults.length} actions for message from ${userName}`)
-      }
+      console.log(`✅ Jenny responded to ${userName} (verified: ${jennyResult.verified})`)
 
     } catch (error) {
       console.error('Failed to handle Telegram message:', error)

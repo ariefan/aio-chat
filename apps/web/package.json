@@ -20,7 +20,9 @@
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,md,json}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,md,json}\"",
     "db:seed": "tsx src/db/seed.ts",
-    "db:seed-kb": "tsx src/db/knowledge-seed.ts"
+    "db:seed-kb": "tsx src/db/knowledge-seed.ts",
+    "db:seed-bpjs": "tsx src/db/bpjs-seed.ts",
+    "scheduler:run": "tsx src/lib/scheduler/run-scheduler.ts"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.1",
