@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(xargs:*)"
+      "Bash(xargs:*)",
+      "Bash(cat:*)",
+      "Bash(scp:*)",
+      "Bash(DATABASE_URL=\"postgresql://dokploy:amukds4wi9001583845717ad2@localhost:5555/aio-chat\" pnpm db:push:*)"
     ],
     "deny": [],
     "ask": []

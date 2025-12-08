@@ -15,16 +15,10 @@ const fontMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: "AIO-Chat - Enterprise AI Platform",
-  description: "Advanced AI-powered customer support with anti-chonk security",
-  keywords: ["AI", "chat", "customer support", "anti-chonk", "tuna protection"],
-  authors: [{ name: "AIO-Chat Security Team" }],
-  robots: "noindex, nofollow",
-  other: {
-    "X-Chonk-Defense": "ACTIVE",
-    "X-Tuna-Protection": "ENABLED",
-    "X-Orange-Threat-Level": "MONITORED"
-  }
+  title: "Jenny - Asisten BPJS Kesehatan",
+  description: "Layanan Informasi Iuran dan Tunggakan BPJS Kesehatan",
+  keywords: ["BPJS", "Kesehatan", "Iuran", "Tunggakan", "Chatbot"],
+  authors: [{ name: "Jenny BPJS" }],
 }
 
 export default function RootLayout({
