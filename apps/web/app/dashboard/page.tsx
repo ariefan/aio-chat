@@ -8,6 +8,7 @@ import { useAuthSync } from '@/hooks/use-auth-sync'
 import { Button } from '@workspace/ui/src/components/button'
 import { Badge } from '@workspace/ui/src/components/badge'
 import { signOut } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import {
   Users,
   MessageCircle,
@@ -34,10 +35,10 @@ interface Conversation {
   id: string
   userId: string
   userName: string | null
-  platformType: string
+  userPlatformType: string | null
+  userPlatformId: string | null
   status: string
   lastMessageAt: string | null
-  messageCount: number
 }
 
 interface DashboardStats {
@@ -49,6 +50,7 @@ interface DashboardStats {
 
 export default function DashboardPage() {
   const { session } = useAuthSync()
+  const router = useRouter()
   const [stats, setStats] = useState<DashboardStats>({
     totalMembers: 0,
     totalConversations: 0,
@@ -286,7 +288,7 @@ export default function DashboardPage() {
                           </td>
                           <td className="p-4">
                             <div className="flex gap-2">
-                              <Button variant="ghost" size="sm" onClick={() => alert(`Detail Peserta\n\nNama: ${member.name}\nNo. BPJS: ${member.bpjsId}\nTelepon: ${member.phone || '-'}\nKelas: ${member.memberClass}\nStatus: ${member.status}\nTunggakan: ${member.totalDebt > 0 ? formatCurrency(member.totalDebt) : 'Tidak ada'}`)}>
+                              <Button variant="ghost" size="sm" onClick={() => router.push(`/dashboard/members/${member.id}`)}>
                                 <Eye className="h-4 w-4" />
                               </Button>
                               <Button variant="ghost" size="sm" onClick={() => alert('Fitur edit belum tersedia di POC')}>
@@ -325,7 +327,7 @@ export default function DashboardPage() {
                           <td className="p-4">{conv.userName || 'Pengguna'}</td>
                           <td className="p-4">
                             <Badge variant="outline">
-                              {conv.platformType === 'telegram' ? 'Telegram' : conv.platformType}
+                              {conv.userPlatformType === 'telegram' ? 'Telegram' : (conv.userPlatformType || '-')}
                             </Badge>
                           </td>
                           <td className="p-4">
@@ -337,7 +339,7 @@ export default function DashboardPage() {
                             {formatDate(conv.lastMessageAt)}
                           </td>
                           <td className="p-4">
-                            <Button variant="ghost" size="sm" onClick={() => alert(`Detail percakapan ${conv.id}\n\nPlatform: ${conv.platformType}\nStatus: ${conv.status}\nPesan: ${conv.messageCount || 0} pesan`)}>
+                            <Button variant="ghost" size="sm" onClick={() => router.push(`/dashboard/conversations/${conv.id}`)}>
                               <Eye className="h-4 w-4 mr-1" />
                               Lihat
                             </Button>
