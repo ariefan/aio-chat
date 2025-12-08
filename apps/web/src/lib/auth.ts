@@ -1,8 +1,7 @@
 import { NextAuthOptions } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
-import { db } from '@/db'
-import { operators } from '@/db/schema'
+import { db, operators } from '@/db'
 import { eq } from 'drizzle-orm'
 
 export const authOptions: NextAuthOptions = {

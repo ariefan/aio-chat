@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Button } from "@workspace/ui/components/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card"
-import { Badge } from "@workspace/ui/components/badge"
+import { Button } from "@workspace/ui/src/components/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/src/components/card"
+import { Badge } from "@workspace/ui/src/components/badge"
 import {
   MessageSquare,
   Users,
@@ -175,10 +175,22 @@ export default function Page() {
           </div>
           <div className="flex items-center gap-3">
             <Button
-              onClick={() => window.location.href = '/dashboard'}
+              onClick={() => window.location.href = '/auth/signin'}
               className="bg-blue-600 hover:bg-blue-700"
             >
-              Go to Real Dashboard
+              Sign In
+            </Button>
+            <Button
+              onClick={() => window.location.href = '/auth/register'}
+              variant="outline"
+            >
+              Register
+            </Button>
+            <Button
+              onClick={() => window.location.href = '/dashboard'}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              Go to Dashboard
             </Button>
             <div className={`w-3 h-3 rounded-full ${statusColor} animate-pulse`} />
             <Badge variant="outline" className="capitalize">
