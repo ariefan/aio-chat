@@ -28,12 +28,8 @@ RUN pnpm install --frozen-lockfile
 FROM base AS builder
 WORKDIR /app
 
-# Copy dependencies
+# Copy all node_modules from deps (pnpm hoists everything to root)
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/packages/eslint-config/node_modules ./packages/eslint-config/node_modules
-COPY --from=deps /app/packages/typescript-config/node_modules ./packages/typescript-config/node_modules
-COPY --from=deps /app/packages/ui/node_modules ./packages/ui/node_modules
-COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
 
 # Copy source code
 COPY . .
