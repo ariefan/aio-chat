@@ -68,8 +68,8 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-# Start the application
-CMD ["node", "server.js"]
+# Start the application (monorepo: server.js is in apps/web/)
+CMD ["node", "apps/web/server.js"]
 
 # =============================================================================
 # Required Environment Variables (set in dokploy):
