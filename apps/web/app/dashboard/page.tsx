@@ -19,7 +19,8 @@ import {
   Eye,
   Upload,
   X,
-  Download
+  Download,
+  Bot
 } from 'lucide-react'
 
 interface BpjsMember {
@@ -250,6 +251,10 @@ export default function DashboardPage() {
                 <p className="text-sm text-gray-600">Selamat datang, {session?.user?.name}</p>
               </div>
               <div className="flex items-center gap-3">
+                <Button variant="default" size="sm" onClick={() => router.push('/dashboard/simulation')}>
+                  <Bot className="h-4 w-4 mr-2" />
+                  Simulasi PANDAWA
+                </Button>
                 <Button variant="outline" size="sm" onClick={fetchData} disabled={loading}>
                   <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                   Refresh

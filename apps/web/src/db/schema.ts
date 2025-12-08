@@ -10,6 +10,7 @@ import {
   integer,
   uuid,
   pgTableCreator,
+  real,
 } from 'drizzle-orm/pg-core'
 
 // Create a base table function for consistent table creation
@@ -88,6 +89,44 @@ export const bpjsMembers = createTable('bpjs_members', {
   status: bpjsMemberStatusEnum('status').default('active'),
   registeredAt: timestamp('registered_at'),
   metadata: jsonb('metadata'), // Additional member data
+
+  // === SIMULATION FIELDS ===
+
+  // Billing Summary (calculated from bpjsDebts)
+  totalArrears: integer('total_arrears').default(0), // Total tunggakan in IDR
+  arrearsMonths: integer('arrears_months').default(0), // Duration of arrears in months
+  lastPaymentDate: timestamp('last_payment_date'),
+  lastPaymentMethod: varchar('last_payment_method', { length: 50 }),
+
+  // Claim History (for leverage strategy)
+  lastClaimDate: timestamp('last_claim_date'),
+  lastClaimType: varchar('last_claim_type', { length: 50 }), // rawat_inap, rawat_jalan, dll
+  lastClaimDiagnosis: varchar('last_claim_diagnosis', { length: 255 }),
+  lastClaimHospital: varchar('last_claim_hospital', { length: 255 }),
+  lastClaimAmount: integer('last_claim_amount'), // Amount in IDR
+
+  // Interaction History
+  lastContactAgent: varchar('last_contact_agent', { length: 100 }),
+  lastContactDate: timestamp('last_contact_date'),
+  lastContactChannel: varchar('last_contact_channel', { length: 50 }), // whatsapp, call, sms
+  lastContactOutcome: varchar('last_contact_outcome', { length: 100 }), // promise_to_pay, refused, no_answer
+  arrearsReason: text('arrears_reason'), // Alasan tunggak
+
+  // Payment Commitment History
+  credibilityScore: real('credibility_score').default(0.5), // 0.0 - 1.0
+  lastPromiseDate: timestamp('last_promise_date'),
+  lastPromiseStatus: varchar('last_promise_status', { length: 50 }), // kept, broken, pending
+  lastPromiseDaysOverdue: integer('last_promise_days_overdue'),
+
+  // Strategy
+  strategyApproach: varchar('strategy_approach', { length: 255 }), // Gentle Reminder, Claim Data Trigger, etc
+  strategyUrgency: varchar('strategy_urgency', { length: 50 }), // low, medium, high, critical
+  strategyTone: varchar('strategy_tone', { length: 50 }), // empathetic, firm, urgent
+
+  // Additional profile data
+  occupation: varchar('occupation', { length: 100 }), // Pekerjaan
+  dependents: integer('dependents').default(0), // Jumlah tanggungan
+
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow(),
 })
