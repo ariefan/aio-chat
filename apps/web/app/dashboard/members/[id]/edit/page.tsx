@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui/src/inde
 import { ProtectedRoute } from '@/components/protected-route'
 import { Button } from '@workspace/ui/src/components/button'
 import { Badge } from '@workspace/ui/src/components/badge'
-import { ArrowLeft, Save, RefreshCw, User, CreditCard } from 'lucide-react'
+import { ArrowLeft, Save, RefreshCw, User, CreditCard, Trash2, Plus } from 'lucide-react'
 
 interface Debt {
   id: string
@@ -17,6 +17,13 @@ interface Debt {
   paidAmount: number | null
   status: string
   lateFee: number | null
+  description: string | null
+}
+
+interface EditableDebt extends Debt {
+  isNew?: boolean
+  isDeleted?: boolean
+  isModified?: boolean
 }
 
 export default function EditMemberPage() {
@@ -28,8 +35,8 @@ export default function EditMemberPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
-  const [debts, setDebts] = useState<Debt[]>([])
-  const [totalDebt, setTotalDebt] = useState(0)
+  const [debts, setDebts] = useState<EditableDebt[]>([])
+  const [originalDebts, setOriginalDebts] = useState<Debt[]>([])
 
   const [formData, setFormData] = useState({
     id: '',
@@ -61,7 +68,7 @@ export default function EditMemberPage() {
           status: data.status || 'active'
         })
         setDebts(data.debts || [])
-        setTotalDebt(data.totalDebt || 0)
+        setOriginalDebts(data.debts || [])
       } else {
         setError('Gagal memuat data peserta')
       }
@@ -84,6 +91,55 @@ export default function EditMemberPage() {
     setSuccess(false)
   }
 
+  const handleDebtChange = (index: number, field: keyof EditableDebt, value: any) => {
+    setDebts(prev => {
+      const updated = [...prev]
+      updated[index] = { ...updated[index], [field]: value, isModified: true }
+      return updated
+    })
+    setError(null)
+    setSuccess(false)
+  }
+
+  const addNewDebt = () => {
+    const now = new Date()
+    const newDebt: EditableDebt = {
+      id: `new-${Date.now()}`,
+      periodMonth: now.getMonth() + 1,
+      periodYear: now.getFullYear(),
+      amount: 0,
+      dueDate: new Date(now.getFullYear(), now.getMonth() + 1, 10).toISOString(),
+      paidAmount: 0,
+      status: 'active',
+      lateFee: 0,
+      description: null,
+      isNew: true
+    }
+    setDebts(prev => [...prev, newDebt])
+  }
+
+  const deleteDebt = (index: number) => {
+    setDebts(prev => {
+      const updated = [...prev]
+      if (updated[index].isNew) {
+        // Remove new debt completely
+        return updated.filter((_, i) => i !== index)
+      } else {
+        // Mark existing debt for deletion
+        updated[index] = { ...updated[index], isDeleted: true }
+        return updated
+      }
+    })
+  }
+
+  const restoreDebt = (index: number) => {
+    setDebts(prev => {
+      const updated = [...prev]
+      updated[index] = { ...updated[index], isDeleted: false }
+      return updated
+    })
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
@@ -91,7 +147,8 @@ export default function EditMemberPage() {
     setSuccess(false)
 
     try {
-      const res = await fetch(`/api/bpjs/members/${memberId}`, {
+      // Update member info
+      const memberRes = await fetch(`/api/bpjs/members/${memberId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -104,17 +161,55 @@ export default function EditMemberPage() {
         })
       })
 
-      if (res.ok) {
-        setSuccess(true)
-        setTimeout(() => {
-          router.push(`/dashboard/members/${memberId}`)
-        }, 1000)
-      } else {
-        const data = await res.json()
-        setError(data.error || 'Gagal menyimpan perubahan')
+      if (!memberRes.ok) {
+        const data = await memberRes.json()
+        throw new Error(data.error || 'Gagal menyimpan data peserta')
       }
-    } catch (err) {
-      setError('Terjadi kesalahan saat menyimpan')
+
+      // Process debt changes
+      for (const debt of debts) {
+        if (debt.isDeleted && !debt.isNew) {
+          // Delete existing debt
+          await fetch(`/api/bpjs/debts/${debt.id}`, { method: 'DELETE' })
+        } else if (debt.isNew && !debt.isDeleted) {
+          // Create new debt
+          await fetch('/api/bpjs/debts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              memberId,
+              periodMonth: debt.periodMonth,
+              periodYear: debt.periodYear,
+              amount: debt.amount,
+              dueDate: debt.dueDate,
+              status: debt.status,
+              lateFee: debt.lateFee || 0,
+              description: debt.description
+            })
+          })
+        } else if (debt.isModified && !debt.isNew && !debt.isDeleted) {
+          // Update existing debt
+          await fetch(`/api/bpjs/debts/${debt.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              amount: debt.amount,
+              dueDate: debt.dueDate,
+              paidAmount: debt.paidAmount,
+              status: debt.status,
+              lateFee: debt.lateFee,
+              description: debt.description
+            })
+          })
+        }
+      }
+
+      setSuccess(true)
+      setTimeout(() => {
+        router.push(`/dashboard/members/${memberId}`)
+      }, 1000)
+    } catch (err: any) {
+      setError(err.message || 'Terjadi kesalahan saat menyimpan')
     }
     setSaving(false)
   }
@@ -123,33 +218,9 @@ export default function EditMemberPage() {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amount)
   }
 
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('id-ID', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    })
-  }
-
-  const getMonthName = (month: number) => {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des']
-    return months[month - 1] || '-'
-  }
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'active':
-        return <Badge variant="default">Aktif</Badge>
-      case 'paid':
-        return <Badge className="bg-green-500">Lunas</Badge>
-      case 'partial':
-        return <Badge className="bg-yellow-500">Sebagian</Badge>
-      case 'overdue':
-        return <Badge variant="destructive">Jatuh Tempo</Badge>
-      default:
-        return <Badge variant="outline">{status}</Badge>
-    }
-  }
+  const totalDebt = debts
+    .filter(d => !d.isDeleted && (d.status === 'active' || d.status === 'overdue'))
+    .reduce((sum, d) => sum + (d.amount - (d.paidAmount || 0)) + (d.lateFee || 0), 0)
 
   return (
     <ProtectedRoute>
@@ -176,19 +247,18 @@ export default function EditMemberPage() {
               <RefreshCw className="h-8 w-8 animate-spin text-gray-400" />
             </div>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Edit Form */}
-              <Card className="lg:col-span-2">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <User className="h-5 w-5" />
-                    Informasi Peserta
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleSubmit} className="space-y-4">
-                    {/* Read-only fields */}
-                    <div className="grid grid-cols-2 gap-4">
+            <form onSubmit={handleSubmit}>
+              <div className="space-y-6">
+                {/* Member Info Card */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <User className="h-5 w-5" />
+                      Informasi Peserta
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">No. BPJS</label>
                         <input
@@ -209,7 +279,6 @@ export default function EditMemberPage() {
                       </div>
                     </div>
 
-                    {/* Editable fields */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Nama *</label>
                       <input
@@ -222,7 +291,7 @@ export default function EditMemberPage() {
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Telepon</label>
                         <input
@@ -253,12 +322,12 @@ export default function EditMemberPage() {
                         name="address"
                         value={formData.address}
                         onChange={handleChange}
-                        rows={3}
+                        rows={2}
                         className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Kelas</label>
                         <select
@@ -286,109 +355,188 @@ export default function EditMemberPage() {
                         </select>
                       </div>
                     </div>
-
-                    {/* Error/Success messages */}
-                    {error && (
-                      <div className="p-3 bg-red-50 text-red-600 rounded-lg text-sm">
-                        {error}
-                      </div>
-                    )}
-                    {success && (
-                      <div className="p-3 bg-green-50 text-green-600 rounded-lg text-sm">
-                        Berhasil disimpan! Mengalihkan...
-                      </div>
-                    )}
-
-                    {/* Action buttons */}
-                    <div className="flex gap-3 pt-4">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => router.back()}
-                        disabled={saving}
-                      >
-                        Batal
-                      </Button>
-                      <Button type="submit" disabled={saving}>
-                        {saving ? (
-                          <>
-                            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                            Menyimpan...
-                          </>
-                        ) : (
-                          <>
-                            <Save className="h-4 w-4 mr-2" />
-                            Simpan Perubahan
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  </form>
-                </CardContent>
-              </Card>
-
-              {/* Debt Summary Sidebar */}
-              <div className="space-y-6">
-                {/* Total Debt Card */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <CreditCard className="h-5 w-5" />
-                      Ringkasan Tunggakan
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="p-4 bg-red-50 rounded-lg text-center">
-                      <p className="text-sm text-red-600 mb-1">Total Tunggakan</p>
-                      <p className="text-2xl font-bold text-red-600">{formatCurrency(totalDebt)}</p>
-                    </div>
-                    <div className="mt-4 text-center text-sm text-gray-500">
-                      {debts.filter(d => d.status === 'active' || d.status === 'overdue').length} tagihan belum lunas
-                    </div>
                   </CardContent>
                 </Card>
 
-                {/* Debt List */}
+                {/* Debt Card */}
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-base">Daftar Tunggakan ({debts.length})</CardTitle>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="flex items-center gap-2">
+                        <CreditCard className="h-5 w-5" />
+                        Daftar Tunggakan ({debts.filter(d => !d.isDeleted).length})
+                      </CardTitle>
+                      <div className="flex items-center gap-4">
+                        <div className="text-right">
+                          <p className="text-sm text-gray-500">Total Tunggakan</p>
+                          <p className="text-xl font-bold text-red-600">{formatCurrency(totalDebt)}</p>
+                        </div>
+                        <Button type="button" variant="outline" size="sm" onClick={addNewDebt}>
+                          <Plus className="h-4 w-4 mr-1" />
+                          Tambah
+                        </Button>
+                      </div>
+                    </div>
                   </CardHeader>
-                  <CardContent className="p-0">
-                    {debts.length === 0 ? (
-                      <div className="p-4 text-center text-gray-500 text-sm">
-                        Tidak ada tunggakan
+                  <CardContent>
+                    {debts.filter(d => !d.isDeleted).length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        Tidak ada tunggakan. Klik "Tambah" untuk menambah tunggakan baru.
                       </div>
                     ) : (
-                      <div className="divide-y max-h-[400px] overflow-y-auto">
-                        {debts.map(debt => (
-                          <div key={debt.id} className="p-3 hover:bg-gray-50">
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <p className="font-medium text-sm">
-                                  {getMonthName(debt.periodMonth)} {debt.periodYear}
-                                </p>
-                                <p className="text-xs text-gray-500">
-                                  Jatuh tempo: {formatDate(debt.dueDate)}
-                                </p>
+                      <div className="space-y-4">
+                        {debts.map((debt, index) => !debt.isDeleted && (
+                          <div key={debt.id} className={`p-4 border rounded-lg ${debt.isNew ? 'border-green-300 bg-green-50' : 'border-gray-200'}`}>
+                            <div className="flex items-start justify-between mb-3">
+                              <div className="flex items-center gap-2">
+                                {debt.isNew && <Badge className="bg-green-500">Baru</Badge>}
+                                <span className="font-medium">Periode</span>
                               </div>
-                              <div className="text-right">
-                                <p className="font-semibold text-sm">{formatCurrency(debt.amount)}</p>
-                                {getStatusBadge(debt.status)}
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => deleteDebt(index)}
+                                className="text-red-500 hover:text-red-700"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                              <div>
+                                <label className="block text-xs text-gray-500 mb-1">Bulan</label>
+                                <select
+                                  value={debt.periodMonth}
+                                  onChange={(e) => handleDebtChange(index, 'periodMonth', parseInt(e.target.value))}
+                                  className="w-full px-2 py-1.5 border rounded text-sm"
+                                >
+                                  {[1,2,3,4,5,6,7,8,9,10,11,12].map(m => (
+                                    <option key={m} value={m}>
+                                      {['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'][m-1]}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div>
+                                <label className="block text-xs text-gray-500 mb-1">Tahun</label>
+                                <input
+                                  type="number"
+                                  value={debt.periodYear}
+                                  onChange={(e) => handleDebtChange(index, 'periodYear', parseInt(e.target.value))}
+                                  className="w-full px-2 py-1.5 border rounded text-sm"
+                                  min={2020}
+                                  max={2030}
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs text-gray-500 mb-1">Jumlah (Rp)</label>
+                                <input
+                                  type="number"
+                                  value={debt.amount}
+                                  onChange={(e) => handleDebtChange(index, 'amount', parseInt(e.target.value) || 0)}
+                                  className="w-full px-2 py-1.5 border rounded text-sm"
+                                  min={0}
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs text-gray-500 mb-1">Denda (Rp)</label>
+                                <input
+                                  type="number"
+                                  value={debt.lateFee || 0}
+                                  onChange={(e) => handleDebtChange(index, 'lateFee', parseInt(e.target.value) || 0)}
+                                  className="w-full px-2 py-1.5 border rounded text-sm"
+                                  min={0}
+                                />
                               </div>
                             </div>
-                            {debt.lateFee && debt.lateFee > 0 && (
-                              <p className="text-xs text-red-500 mt-1">
-                                Denda: {formatCurrency(debt.lateFee)}
-                              </p>
-                            )}
+
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3">
+                              <div>
+                                <label className="block text-xs text-gray-500 mb-1">Jatuh Tempo</label>
+                                <input
+                                  type="date"
+                                  value={debt.dueDate?.split('T')[0] || ''}
+                                  onChange={(e) => handleDebtChange(index, 'dueDate', e.target.value)}
+                                  className="w-full px-2 py-1.5 border rounded text-sm"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs text-gray-500 mb-1">Dibayar (Rp)</label>
+                                <input
+                                  type="number"
+                                  value={debt.paidAmount || 0}
+                                  onChange={(e) => handleDebtChange(index, 'paidAmount', parseInt(e.target.value) || 0)}
+                                  className="w-full px-2 py-1.5 border rounded text-sm"
+                                  min={0}
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs text-gray-500 mb-1">Status</label>
+                                <select
+                                  value={debt.status}
+                                  onChange={(e) => handleDebtChange(index, 'status', e.target.value)}
+                                  className="w-full px-2 py-1.5 border rounded text-sm"
+                                >
+                                  <option value="active">Aktif</option>
+                                  <option value="partial">Sebagian</option>
+                                  <option value="paid">Lunas</option>
+                                  <option value="overdue">Jatuh Tempo</option>
+                                  <option value="written_off">Dihapus</option>
+                                </select>
+                              </div>
+                              <div>
+                                <label className="block text-xs text-gray-500 mb-1">Sisa</label>
+                                <div className="px-2 py-1.5 bg-gray-100 rounded text-sm font-medium text-red-600">
+                                  {formatCurrency(debt.amount + (debt.lateFee || 0) - (debt.paidAmount || 0))}
+                                </div>
+                              </div>
+                            </div>
                           </div>
                         ))}
                       </div>
                     )}
                   </CardContent>
                 </Card>
+
+                {/* Error/Success messages */}
+                {error && (
+                  <div className="p-3 bg-red-50 text-red-600 rounded-lg text-sm">
+                    {error}
+                  </div>
+                )}
+                {success && (
+                  <div className="p-3 bg-green-50 text-green-600 rounded-lg text-sm">
+                    Berhasil disimpan! Mengalihkan...
+                  </div>
+                )}
+
+                {/* Action buttons */}
+                <div className="flex gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => router.back()}
+                    disabled={saving}
+                  >
+                    Batal
+                  </Button>
+                  <Button type="submit" disabled={saving}>
+                    {saving ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        Menyimpan...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="h-4 w-4 mr-2" />
+                        Simpan Perubahan
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
-            </div>
+            </form>
           )}
         </div>
       </div>
