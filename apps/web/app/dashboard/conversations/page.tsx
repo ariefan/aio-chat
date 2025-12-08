@@ -282,10 +282,12 @@ export default function ConversationsPage() {
                           msg.direction === 'outbound' ? 'text-blue-100' : 'text-gray-500'
                         }`}
                       >
-                        {formatDistanceToNow(new Date(msg.sentAt), {
-                          addSuffix: true,
-                          locale: idLocale,
-                        })}
+                        {msg.sentAt
+                          ? formatDistanceToNow(new Date(msg.sentAt), {
+                              addSuffix: true,
+                              locale: idLocale,
+                            })
+                          : '-'}
                         {msg.metadata?.verified && (
                           <span className="ml-2">Terverifikasi</span>
                         )}
