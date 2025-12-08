@@ -376,16 +376,17 @@ export function useWebSocket(options: WebSocketClientOptions = {}) {
   }, [options, client])
 
   // Connect when session is available
+  // DISABLED FOR POC - No WebSocket server running
   useEffect(() => {
-    if (session?.user) {
-      // Use the session token for WebSocket authentication
-      client.connect(session.user.id || '').catch(error => {
-        console.error('Failed to connect WebSocket:', error)
-      })
-    }
+    // WebSocket disabled for POC
+    // if (session?.user) {
+    //   client.connect(session.user.id || '').catch(error => {
+    //     console.error('Failed to connect WebSocket:', error)
+    //   })
+    // }
 
     return () => {
-      client.disconnect()
+      // client.disconnect()
     }
   }, [session, client])
 

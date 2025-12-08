@@ -187,11 +187,12 @@ export const useWebSocket = (url?: string) => {
     }
   }, [addNotification])
 
+  // DISABLED FOR POC - No WebSocket server running
   useEffect(() => {
-    connect()
+    // connect()
 
     return () => {
-      disconnect()
+      // disconnect()
     }
   }, [connect, disconnect])
 

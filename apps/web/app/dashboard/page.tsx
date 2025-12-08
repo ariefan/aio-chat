@@ -286,10 +286,10 @@ export default function DashboardPage() {
                           </td>
                           <td className="p-4">
                             <div className="flex gap-2">
-                              <Button variant="ghost" size="sm">
+                              <Button variant="ghost" size="sm" onClick={() => alert(`Detail Peserta\n\nNama: ${member.name}\nNo. BPJS: ${member.bpjsId}\nTelepon: ${member.phone || '-'}\nKelas: ${member.memberClass}\nStatus: ${member.status}\nTunggakan: ${member.totalDebt > 0 ? formatCurrency(member.totalDebt) : 'Tidak ada'}`)}>
                                 <Eye className="h-4 w-4" />
                               </Button>
-                              <Button variant="ghost" size="sm">
+                              <Button variant="ghost" size="sm" onClick={() => alert('Fitur edit belum tersedia di POC')}>
                                 <Edit className="h-4 w-4" />
                               </Button>
                             </div>
@@ -337,7 +337,7 @@ export default function DashboardPage() {
                             {formatDate(conv.lastMessageAt)}
                           </td>
                           <td className="p-4">
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" onClick={() => alert(`Detail percakapan ${conv.id}\n\nPlatform: ${conv.platformType}\nStatus: ${conv.status}\nPesan: ${conv.messageCount || 0} pesan`)}>
                               <Eye className="h-4 w-4 mr-1" />
                               Lihat
                             </Button>
