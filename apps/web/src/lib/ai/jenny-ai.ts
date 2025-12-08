@@ -1,38 +1,69 @@
 /**
  * Jenny AI Client - BPJS Kesehatan Debt Collection Chatbot
  *
- * Uses OpenRouter API with google/gemma-3-4b-it model
- * Fallback to TogetherAI if configured
+ * Single provider architecture - switchable via AI_PROVIDER env:
+ * - 'openrouter' (default): Uses OpenRouter API
+ * - 'togetherai': Uses TogetherAI API
  */
 
 import { db } from '@/db'
 import { bpjsMembers, bpjsDebts, users } from '@/db/schema'
-import { eq, and, desc, gte, lte } from 'drizzle-orm'
+import { eq, and, desc } from 'drizzle-orm'
 
-// AI Provider configuration
+// =============================================================================
+// AI Provider Configuration
+// =============================================================================
+
 type AIProvider = 'openrouter' | 'togetherai'
 
-const AI_CONFIG = {
-  openrouter: {
+interface AIProviderConfig {
+  baseUrl: string
+  model: string
+  apiKey: string
+  headers: Record<string, string>
+}
+
+function getAIConfig(): AIProviderConfig {
+  const provider = (process.env.AI_PROVIDER || 'openrouter') as AIProvider
+
+  if (provider === 'togetherai') {
+    const apiKey = process.env.AI_API_KEY || ''
+    if (!apiKey) {
+      throw new Error('AI_API_KEY is required for TogetherAI')
+    }
+    return {
+      baseUrl: 'https://api.together.xyz/v1',
+      model: process.env.AI_MODEL || 'google/gemma-2-9b-it',
+      apiKey,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+    }
+  }
+
+  // Default: OpenRouter
+  const apiKey = process.env.AI_API_KEY || ''
+  if (!apiKey) {
+    throw new Error('AI_API_KEY is required for OpenRouter')
+  }
+  return {
     baseUrl: 'https://openrouter.ai/api/v1',
-    model: process.env.OPENROUTER_MODEL || 'google/gemma-3-4b-it',
-    apiKey: process.env.OPENROUTER_API_KEY,
-  },
-  togetherai: {
-    baseUrl: 'https://api.together.xyz/v1',
-    model: process.env.TOGETHERAI_MODEL || 'google/gemma-2-9b-it',
-    apiKey: process.env.TOGETHERAI_API_KEY,
-  },
+    model: process.env.AI_MODEL || 'google/gemma-3-4b-it',
+    apiKey,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+      'HTTP-Referer': process.env.NEXTAUTH_URL || 'http://localhost:3000',
+      'X-Title': 'Jenny BPJS Chatbot',
+    },
+  }
 }
 
-// Get the active provider
-function getProvider(): AIProvider {
-  if (AI_CONFIG.openrouter.apiKey) return 'openrouter'
-  if (AI_CONFIG.togetherai.apiKey) return 'togetherai'
-  throw new Error('No AI API key configured. Set OPENROUTER_API_KEY or TOGETHERAI_API_KEY')
-}
+// =============================================================================
+// Jenny System Prompt (Bahasa Indonesia)
+// =============================================================================
 
-// Jenny's system prompt - Bahasa Indonesia
 export const JENNY_SYSTEM_PROMPT = `Kamu adalah Jenny, asisten virtual ramah dari BPJS Kesehatan Indonesia. Tugasmu adalah membantu peserta BPJS dalam hal:
 
 1. **Verifikasi Identitas**: Membantu peserta memverifikasi identitas dengan nomor BPJS/NIK
@@ -62,6 +93,10 @@ Minta mereka menyebutkan nomor BPJS (13 digit) untuk verifikasi.
 "Halo Bapak/Ibu, saya Jenny dari BPJS Kesehatan. Ada yang bisa saya bantu hari ini?"
 
 Ingat: Kamu adalah representasi BPJS Kesehatan, jaga profesionalisme dan keramahan.`
+
+// =============================================================================
+// Types
+// =============================================================================
 
 export interface JennyChatMessage {
   role: 'user' | 'assistant' | 'system'
@@ -93,6 +128,10 @@ export interface BpjsMemberInfo {
   }[]
   totalDebt: number
 }
+
+// =============================================================================
+// BPJS Verification Functions
+// =============================================================================
 
 /**
  * Verify BPJS ID and return member info
@@ -193,7 +232,7 @@ export async function linkBpjsToUser(bpjsMemberId: string, userId: string): Prom
 export function extractBpjsId(text: string): string | null {
   // Look for 13-digit number (typical BPJS ID format)
   const match = text.match(/\b(\d{13})\b/)
-  return match ? match[1] : null
+  return match ? match[1] ?? null : null
 }
 
 /**
@@ -239,8 +278,12 @@ export function formatDebtInfo(memberInfo: BpjsMemberInfo): string {
   return message
 }
 
+// =============================================================================
+// AI Chat Functions
+// =============================================================================
+
 /**
- * Generate chat completion using OpenRouter/TogetherAI
+ * Generate chat completion using configured AI provider
  */
 export async function generateJennyResponse(
   userMessage: string,
@@ -251,9 +294,6 @@ export async function generateJennyResponse(
   tokensUsed?: number
   memberInfo?: BpjsMemberInfo
 }> {
-  const provider = getProvider()
-  const config = AI_CONFIG[provider]
-
   const {
     conversationHistory = [],
     temperature = 0.7,
@@ -261,6 +301,8 @@ export async function generateJennyResponse(
   } = options
 
   try {
+    const config = getAIConfig()
+
     // Check if user is mentioning BPJS ID for verification
     const extractedBpjsId = extractBpjsId(userMessage)
     let memberInfo: BpjsMemberInfo | null = null
@@ -296,14 +338,7 @@ export async function generateJennyResponse(
     // Make API request
     const response = await fetch(`${config.baseUrl}/chat/completions`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${config.apiKey}`,
-        ...(provider === 'openrouter' && {
-          'HTTP-Referer': process.env.NEXTAUTH_URL || 'http://localhost:3000',
-          'X-Title': 'Jenny BPJS Chatbot',
-        }),
-      },
+      headers: config.headers,
       body: JSON.stringify({
         model: config.model,
         messages,

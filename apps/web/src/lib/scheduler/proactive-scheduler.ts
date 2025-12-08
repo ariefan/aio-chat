@@ -14,8 +14,11 @@ import {
 import { eq, and, lte, gte, isNull, desc } from 'drizzle-orm'
 import { getTelegramAdapter } from '@/lib/messaging/telegram-adapter'
 
-// Message templates for different reminder types
-const REMINDER_TEMPLATES = {
+// Message templates for due date reminders (takes dueDate string)
+type ReminderTemplate = (name: string, amount: number, dueDate: string) => string
+type OverdueTemplate = (name: string, amount: number, daysOverdue: number) => string
+
+const REMINDER_TEMPLATES: Record<'reminder_7d' | 'reminder_3d' | 'reminder_1d', ReminderTemplate> = {
   reminder_7d: (name: string, amount: number, dueDate: string) =>
     `Halo Bapak/Ibu ${name},\n\n` +
     `Saya Jenny dari BPJS Kesehatan. Ini adalah pengingat bahwa iuran BPJS Anda sebesar *Rp ${amount.toLocaleString('id-ID')}* akan jatuh tempo pada *${dueDate}*.\n\n` +
@@ -40,15 +43,16 @@ const REMINDER_TEMPLATES = {
     `• Denda keterlambatan\n` +
     `• Penonaktifan kartu BPJS\n\n` +
     `Terima kasih.\n\nJenny - BPJS Kesehatan`,
-
-  overdue: (name: string, amount: number, daysOverdue: number) =>
-    `⛔ *TUNGGAKAN BPJS*\n\n` +
-    `Halo Bapak/Ibu ${name},\n\n` +
-    `Iuran BPJS Anda sebesar *Rp ${amount.toLocaleString('id-ID')}* telah *melewati jatuh tempo ${daysOverdue} hari*.\n\n` +
-    `Mohon segera lakukan pembayaran untuk mengaktifkan kembali layanan BPJS Kesehatan Anda.\n\n` +
-    `Ketik nomor BPJS Anda untuk melihat total tunggakan dan cara pembayaran.\n\n` +
-    `Jenny - BPJS Kesehatan`,
 }
+
+// Overdue template (takes daysOverdue number)
+const OVERDUE_TEMPLATE: OverdueTemplate = (name: string, amount: number, daysOverdue: number) =>
+  `⛔ *TUNGGAKAN BPJS*\n\n` +
+  `Halo Bapak/Ibu ${name},\n\n` +
+  `Iuran BPJS Anda sebesar *Rp ${amount.toLocaleString('id-ID')}* telah *melewati jatuh tempo ${daysOverdue} hari*.\n\n` +
+  `Mohon segera lakukan pembayaran untuk mengaktifkan kembali layanan BPJS Kesehatan Anda.\n\n` +
+  `Ketik nomor BPJS Anda untuk melihat total tunggakan dan cara pembayaran.\n\n` +
+  `Jenny - BPJS Kesehatan`
 
 /**
  * Generate proactive messages for upcoming due dates
@@ -177,7 +181,7 @@ export async function generateDueReminders(): Promise<number> {
         .set({ status: 'overdue', updatedAt: new Date() })
         .where(eq(bpjsDebts.id, debt.id))
 
-      const content = REMINDER_TEMPLATES.overdue(member.name, debt.amount, daysOverdue)
+      const content = OVERDUE_TEMPLATE(member.name, debt.amount, daysOverdue)
 
       await db.insert(proactiveMessages).values({
         memberId: member.id,
@@ -331,7 +335,6 @@ export async function triggerProactiveMessage(
       throw new Error('No debt found for member')
     }
 
-    const template = REMINDER_TEMPLATES[messageType]
     const dueDate = new Date(debt.dueDate)
     const dueDateStr = dueDate.toLocaleDateString('id-ID', {
       weekday: 'long',
@@ -343,8 +346,9 @@ export async function triggerProactiveMessage(
     let content: string
     if (messageType === 'overdue') {
       const daysOverdue = Math.ceil((Date.now() - dueDate.getTime()) / (24 * 60 * 60 * 1000))
-      content = template(member.name, debt.amount, daysOverdue)
+      content = OVERDUE_TEMPLATE(member.name, debt.amount, daysOverdue)
     } else {
+      const template = REMINDER_TEMPLATES[messageType]
       content = template(member.name, debt.amount, dueDateStr)
     }
 

@@ -3,8 +3,8 @@
 import { Metadata } from 'next'
 import { Suspense } from 'react'
 import { Card, CardContent } from '@workspace/ui/src/index'
-import { ProtectedRoute } from '@/src/components/protected-route'
-import { useAuthSync } from '@/src/hooks/use-auth-sync'
+import { ProtectedRoute } from '@/components/protected-route'
+import { useAuthSync } from '@/hooks/use-auth-sync'
 import { Button } from '@workspace/ui/src/components/button'
 import { signOut } from 'next-auth/react'
 

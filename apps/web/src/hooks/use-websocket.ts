@@ -122,7 +122,7 @@ export const useWebSocket = (url?: string) => {
         addNotification({
           type: 'info',
           title: 'New Conversation',
-          message: `Conversation with ${newConversation.metadata?.customerName || 'Unknown'} started`,
+          message: `Conversation with ${(newConversation.metadata as Record<string, unknown>)?.customerName || 'Unknown'} started`,
           duration: 3000
         })
         break

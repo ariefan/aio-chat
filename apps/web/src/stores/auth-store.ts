@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-import { Session } from 'next-auth/react'
+import type { Session } from 'next-auth'
 
 interface AuthState {
   session: Session | null

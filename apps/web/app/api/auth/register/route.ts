@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     }).returning()
 
     // Remove password hash from response
-    const { passwordHash: _, ...operatorWithoutPassword } = newOperator[0]
+    const { passwordHash: _, ...operatorWithoutPassword } = newOperator[0]!
 
     return NextResponse.json({
       operator: operatorWithoutPassword,
