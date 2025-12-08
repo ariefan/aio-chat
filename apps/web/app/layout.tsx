@@ -15,10 +15,10 @@ const fontMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: "Jenny - Asisten BPJS Kesehatan",
-  description: "Layanan Informasi Iuran dan Tunggakan BPJS Kesehatan",
-  keywords: ["BPJS", "Kesehatan", "Iuran", "Tunggakan", "Chatbot"],
-  authors: [{ name: "Jenny BPJS" }],
+  title: "RICH - Research Insight Circle Hub",
+  description: "BPJS Kesehatan Research & Insight Platform",
+  keywords: ["BPJS", "Kesehatan", "Research", "Insight", "Analytics"],
+  authors: [{ name: "RICH BPJS" }],
 }
 
 export default function RootLayout({

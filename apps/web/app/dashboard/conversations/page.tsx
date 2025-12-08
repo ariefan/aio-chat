@@ -141,7 +141,7 @@ export default function ConversationsPage() {
         <div>
           <h1 className="text-2xl font-bold">Live Conversations</h1>
           <p className="text-muted-foreground">
-            Monitor percakapan Jenny dengan peserta BPJS
+            Monitor percakapan RICH dengan peserta BPJS
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -283,7 +283,7 @@ export default function ConversationsPage() {
                       {msg.direction === 'outbound' && msg.metadata?.ai && (
                         <div className="flex items-center gap-1 text-xs mb-1 opacity-80">
                           <Bot className="h-3 w-3" />
-                          Jenny AI
+                          RICH AI
                         </div>
                       )}
                       <p className="whitespace-pre-wrap">{msg.content}</p>

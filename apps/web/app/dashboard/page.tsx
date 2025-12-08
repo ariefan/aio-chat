@@ -258,8 +258,8 @@ export default function DashboardPage() {
         {/* Sidebar */}
         <div className="w-64 bg-white border-r flex flex-col shrink-0 hidden lg:flex">
           <div className="p-4 border-b">
-            <h1 className="text-xl font-bold text-green-600">Jenny BPJS</h1>
-            <p className="text-xs text-gray-500">AI Chatbot Platform</p>
+            <h1 className="text-xl font-bold text-green-600">RICH BPJS</h1>
+            <p className="text-xs text-gray-500">Research Insight Circle Hub</p>
           </div>
           <nav className="flex-1 p-4 space-y-1">
             {menuItems.map((item, idx) => (
