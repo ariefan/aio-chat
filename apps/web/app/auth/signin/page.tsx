@@ -44,9 +44,9 @@ export default function SignInPage() {
     <div className="flex min-h-screen items-center justify-center">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">Sign In</CardTitle>
+          <CardTitle className="text-2xl font-bold text-center">Masuk</CardTitle>
           <CardDescription className="text-center">
-            Enter your email and password to access your account
+            Masukkan email dan kata sandi untuk mengakses akun Anda
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
@@ -61,7 +61,7 @@ export default function SignInPage() {
               <Input
                 id="email"
                 type="email"
-                placeholder="Enter your email"
+                placeholder="Masukkan email Anda"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -69,11 +69,11 @@ export default function SignInPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">Kata Sandi</Label>
               <Input
                 id="password"
                 type="password"
-                placeholder="Enter your password"
+                placeholder="Masukkan kata sandi"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -83,12 +83,12 @@ export default function SignInPage() {
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Signing in..." : "Sign In"}
+              {isLoading ? "Sedang masuk..." : "Masuk"}
             </Button>
             <p className="text-center text-sm text-muted-foreground">
-              Don&apos;t have an account?{" "}
+              Belum punya akun?{" "}
               <Link href="/auth/register" className="text-primary hover:underline">
-                Sign up
+                Daftar
               </Link>
             </p>
           </CardFooter>

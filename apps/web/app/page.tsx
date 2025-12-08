@@ -167,9 +167,9 @@ export default function Page() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-4xl font-bold text-slate-900">AIO-Chat Dashboard</h1>
+            <h1 className="text-4xl font-bold text-slate-900">Jenny - Asisten BPJS Kesehatan</h1>
             <p className="text-lg text-slate-600 mt-2">
-              Enterprise AI-Powered Customer Support Platform
+              Layanan Informasi Iuran dan Tunggakan BPJS Kesehatan
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -177,19 +177,19 @@ export default function Page() {
               onClick={() => window.location.href = '/auth/signin'}
               className="bg-blue-600 hover:bg-blue-700"
             >
-              Sign In
+              Masuk
             </Button>
             <Button
               onClick={() => window.location.href = '/auth/register'}
               variant="outline"
             >
-              Register
+              Daftar
             </Button>
             <Button
               onClick={() => window.location.href = '/dashboard'}
               className="bg-green-600 hover:bg-green-700"
             >
-              Go to Dashboard
+              Ke Dashboard
             </Button>
             <div className={`w-3 h-3 rounded-full ${statusColor} animate-pulse`} />
             <Badge variant="outline" className="capitalize">
@@ -209,45 +209,45 @@ export default function Page() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card className="transform hover:scale-105 transition-all duration-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Conversations</CardTitle>
+              <CardTitle className="text-sm font-medium">Total Percakapan</CardTitle>
               <MessageSquare className="h-4 w-4 text-blue-600" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{isLoading ? '...' : stats.totalConversations.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">+12% from last week</p>
+              <p className="text-xs text-muted-foreground">+12% dari minggu lalu</p>
             </CardContent>
           </Card>
 
           <Card className="transform hover:scale-105 transition-all duration-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+              <CardTitle className="text-sm font-medium">Pengguna Aktif</CardTitle>
               <Users className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{isLoading ? '...' : stats.activeUsers}</div>
-              <p className="text-xs text-muted-foreground">Online now</p>
+              <p className="text-xs text-muted-foreground">Sedang online</p>
             </CardContent>
           </Card>
 
           <Card className="transform hover:scale-105 transition-all duration-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">AI Responses</CardTitle>
+              <CardTitle className="text-sm font-medium">Respon AI</CardTitle>
               <Bot className="h-4 w-4 text-purple-600" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{isLoading ? '...' : stats.aiResponses.toLocaleString()}</div>
-              <p className="text-xs text-muted-foreground">98% satisfaction</p>
+              <p className="text-xs text-muted-foreground">98% kepuasan</p>
             </CardContent>
           </Card>
 
           <Card className="transform hover:scale-105 transition-all duration-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Knowledge Docs</CardTitle>
+              <CardTitle className="text-sm font-medium">Dokumen Pengetahuan</CardTitle>
               <Database className="h-4 w-4 text-orange-600" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{isLoading ? '...' : stats.knowledgeDocs}</div>
-              <p className="text-xs text-muted-foreground">Ready for RAG</p>
+              <p className="text-xs text-muted-foreground">Siap digunakan</p>
             </CardContent>
           </Card>
         </div>
@@ -259,10 +259,10 @@ export default function Page() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Zap className="h-5 w-5" />
-                Quick Actions
+                Aksi Cepat
               </CardTitle>
               <CardDescription>
-                Launch powerful AIO-Chat features and tools
+                Akses fitur dan tools Jenny
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -273,8 +273,8 @@ export default function Page() {
                 >
                   <MessageSquare className="h-6 w-6" />
                   <div className="text-left">
-                    <div className="font-semibold">Test AI Chat</div>
-                    <div className="text-sm opacity-80">Start a conversation with the AI assistant</div>
+                    <div className="font-semibold">Uji Chat AI</div>
+                    <div className="text-sm opacity-80">Mulai percakapan dengan asisten AI</div>
                   </div>
                 </Button>
 
@@ -285,8 +285,8 @@ export default function Page() {
                 >
                   <Database className="h-6 w-6" />
                   <div className="text-left">
-                    <div className="font-semibold">Knowledge Base</div>
-                    <div className="text-sm opacity-80">Browse and manage documentation</div>
+                    <div className="font-semibold">Basis Pengetahuan</div>
+                    <div className="text-sm opacity-80">Kelola dokumen dan informasi</div>
                   </div>
                 </Button>
 
@@ -297,8 +297,8 @@ export default function Page() {
                 >
                   <Shield className="h-6 w-6" />
                   <div className="text-left">
-                    <div className="font-semibold">Automation Rules</div>
-                    <div className="text-sm opacity-80">Configure automated workflows</div>
+                    <div className="font-semibold">Aturan Otomasi</div>
+                    <div className="text-sm opacity-80">Konfigurasi alur kerja otomatis</div>
                   </div>
                 </Button>
 
@@ -309,8 +309,8 @@ export default function Page() {
                 >
                   <TrendingUp className="h-6 w-6" />
                   <div className="text-left">
-                    <div className="font-semibold">Analytics</div>
-                    <div className="text-sm opacity-80">View performance metrics</div>
+                    <div className="font-semibold">Analitik</div>
+                    <div className="text-sm opacity-80">Lihat metrik kinerja</div>
                   </div>
                 </Button>
               </div>
@@ -322,21 +322,21 @@ export default function Page() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Activity className="h-5 w-5" />
-                System Status
+                Status Sistem
               </CardTitle>
               <CardDescription>
-                Real-time platform health monitoring
+                Pemantauan kesehatan platform
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Platform</span>
-                  <Badge variant="default" className="bg-green-100 text-green-800">Online</Badge>
+                  <Badge variant="default" className="bg-green-100 text-green-800">Aktif</Badge>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">AI Service</span>
-                  <Badge variant="default" className="bg-green-100 text-green-800">Connected</Badge>
+                  <span className="text-sm">Layanan AI</span>
+                  <Badge variant="default" className="bg-green-100 text-green-800">Terhubung</Badge>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm">Database</span>
@@ -344,20 +344,19 @@ export default function Page() {
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm">WebSocket</span>
-                  <Badge variant="default" className="bg-green-100 text-green-800">Active</Badge>
+                  <Badge variant="default" className="bg-green-100 text-green-800">Aktif</Badge>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm">Uptime</span>
+                  <span className="text-sm">Waktu Aktif</span>
                   <span className="text-sm font-mono">{stats.uptime}</span>
                 </div>
               </div>
 
               <div className="pt-4 border-t">
                 <div className="text-xs text-muted-foreground">
-                  <div>• 5 knowledge documents loaded</div>
-                  <div>• PostgreSQL backend active</div>
-                  <div>• RAG system ready</div>
-                  <div>• WebSocket server listening</div>
+                  <div>• Sistem RAG siap digunakan</div>
+                  <div>• Database PostgreSQL aktif</div>
+                  <div>• Server WebSocket aktif</div>
                 </div>
               </div>
             </CardContent>

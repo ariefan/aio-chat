@@ -80,9 +80,9 @@ export default function RegisterPage() {
     <div className="flex min-h-screen items-center justify-center">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">Create Account</CardTitle>
+          <CardTitle className="text-2xl font-bold text-center">Buat Akun</CardTitle>
           <CardDescription className="text-center">
-            Enter your details to create a new account
+            Masukkan data Anda untuk membuat akun baru
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
@@ -93,11 +93,11 @@ export default function RegisterPage() {
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
+              <Label htmlFor="name">Nama</Label>
               <Input
                 id="name"
                 type="text"
-                placeholder="Enter your name"
+                placeholder="Masukkan nama Anda"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
@@ -109,7 +109,7 @@ export default function RegisterPage() {
               <Input
                 id="email"
                 type="email"
-                placeholder="Enter your email"
+                placeholder="Masukkan email Anda"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -117,11 +117,11 @@ export default function RegisterPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">Kata Sandi</Label>
               <Input
                 id="password"
                 type="password"
-                placeholder="Enter your password"
+                placeholder="Masukkan kata sandi"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -129,11 +129,11 @@ export default function RegisterPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <Label htmlFor="confirmPassword">Konfirmasi Kata Sandi</Label>
               <Input
                 id="confirmPassword"
                 type="password"
-                placeholder="Confirm your password"
+                placeholder="Masukkan ulang kata sandi"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
@@ -143,12 +143,12 @@ export default function RegisterPage() {
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Creating account..." : "Create Account"}
+              {isLoading ? "Membuat akun..." : "Buat Akun"}
             </Button>
             <p className="text-center text-sm text-muted-foreground">
-              Already have an account?{" "}
+              Sudah punya akun?{" "}
               <Link href="/auth/signin" className="text-primary hover:underline">
-                Sign in
+                Masuk
               </Link>
             </p>
           </CardFooter>

@@ -15,14 +15,14 @@ export default function DashboardPage() {
     <ProtectedRoute>
       <div className="container mx-auto py-6">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold">Welcome, {session?.user?.name}!</h1>
-          <p className="text-muted-foreground">AIO-Chat Dashboard</p>
+          <h1 className="text-3xl font-bold">Selamat Datang, {session?.user?.name}!</h1>
+          <p className="text-muted-foreground">Dashboard Jenny BPJS</p>
           <Button
             onClick={() => signOut({ callbackUrl: '/' })}
             variant="outline"
             className="mt-4"
           >
-            Sign Out
+            Keluar
           </Button>
         </div>
 
@@ -31,23 +31,23 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <Card>
               <CardContent className="p-6">
-                <h3 className="text-lg font-semibold mb-2">Conversations</h3>
+                <h3 className="text-lg font-semibold mb-2">Percakapan</h3>
                 <p className="text-3xl font-bold">0</p>
-                <p className="text-sm text-muted-foreground">Active conversations</p>
+                <p className="text-sm text-muted-foreground">Percakapan aktif</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-6">
-                <h3 className="text-lg font-semibold mb-2">Messages</h3>
+                <h3 className="text-lg font-semibold mb-2">Pesan</h3>
                 <p className="text-3xl font-bold">0</p>
-                <p className="text-sm text-muted-foreground">Messages sent today</p>
+                <p className="text-sm text-muted-foreground">Pesan terkirim hari ini</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-6">
                 <h3 className="text-lg font-semibold mb-2">Status</h3>
-                <p className="text-3xl font-bold text-green-600">Online</p>
-                <p className="text-sm text-muted-foreground">System operational</p>
+                <p className="text-3xl font-bold text-green-600">Aktif</p>
+                <p className="text-sm text-muted-foreground">Sistem berjalan normal</p>
               </CardContent>
             </Card>
           </div>
@@ -55,11 +55,11 @@ export default function DashboardPage() {
           <div className="mt-8">
             <Card>
               <CardContent className="p-6">
-                <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
+                <h3 className="text-lg font-semibold mb-4">Aksi Cepat</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Button className="h-16">View Conversations</Button>
-                  <Button variant="outline" className="h-16">Knowledge Base</Button>
-                  <Button variant="outline" className="h-16">Automation Rules</Button>
+                  <Button className="h-16">Lihat Percakapan</Button>
+                  <Button variant="outline" className="h-16">Basis Pengetahuan</Button>
+                  <Button variant="outline" className="h-16">Aturan Otomasi</Button>
                 </div>
               </CardContent>
             </Card>
