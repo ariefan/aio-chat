@@ -84,14 +84,14 @@ export default function SettingsPage() {
   const promptSettings = [
     {
       key: 'ai.jenny.system_prompt',
-      title: 'Jenny AI System Prompt',
-      description: 'System prompt untuk Jenny chatbot yang melayani peserta BPJS via Telegram/WhatsApp',
+      title: 'RICH AI System Prompt',
+      description: 'System prompt untuk RICH chatbot yang melayani peserta BPJS via Telegram/WhatsApp',
       icon: Bot,
     },
     {
       key: 'ai.simulation.system_prompt',
       title: 'Simulation AI System Prompt',
-      description: 'System prompt untuk simulasi penagihan PANDAWA',
+      description: 'System prompt untuk simulasi penagihan RICH',
       icon: MessageSquare,
     },
   ]

@@ -80,7 +80,7 @@ export function CustomerPanel({ data }: CustomerPanelProps) {
       <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-lg font-bold text-slate-800">
-            PANDAWA <span className="text-green-600">Dashboard</span>
+            RICH <span className="text-green-600">Dashboard</span>
           </h1>
           <p className="text-xs text-slate-500">Case ID: {data.id.slice(0, 8)}...</p>
         </div>

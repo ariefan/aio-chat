@@ -445,7 +445,7 @@ export default function MemberDetailPage() {
                           onClick={() => router.push(`/dashboard/simulation?memberId=${member.id}`)}
                         >
                           <Bot className="h-4 w-4 mr-2" />
-                          Mulai Simulasi PANDAWA
+                          Mulai Simulasi RICH
                         </Button>
                       </>
                     ) : (
@@ -457,7 +457,7 @@ export default function MemberDetailPage() {
                           onClick={() => router.push(`/dashboard/simulation?memberId=${member.id}`)}
                         >
                           <Bot className="h-4 w-4 mr-2" />
-                          Mulai Simulasi PANDAWA
+                          Mulai Simulasi RICH
                         </Button>
                       </>
                     )}

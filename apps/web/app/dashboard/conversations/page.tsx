@@ -394,7 +394,7 @@ function ConversationsPageContent() {
                             {msg.direction === 'outbound' && msg.metadata?.ai && (
                               <div className="flex items-center gap-1 text-[10px] mb-1 text-green-700">
                                 <Bot className="h-3 w-3" />
-                                Jenny AI
+                                RICH AI
                               </div>
                             )}
                             <div className="whitespace-pre-wrap break-words">{msg.content}</div>

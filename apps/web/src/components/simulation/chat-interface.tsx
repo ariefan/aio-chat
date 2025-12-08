@@ -52,12 +52,12 @@ export function ChatInterface({ messages, onSendMessage, isLoading }: ChatInterf
           <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-[#008069] overflow-hidden border border-white/20">
             <img
               src="https://upload.wikimedia.org/wikipedia/commons/b/b5/Logo_BPJS_Kesehatan.png"
-              alt="PANDAWA"
+              alt="RICH"
               className="w-full h-full object-cover p-1"
             />
           </div>
           <div className="flex flex-col">
-            <h2 className="font-semibold text-[15px] leading-tight">PANDAWA</h2>
+            <h2 className="font-semibold text-[15px] leading-tight">RICH BPJS</h2>
             <span className="text-[11px] opacity-90 text-white/80">Official Business Account</span>
           </div>
         </div>

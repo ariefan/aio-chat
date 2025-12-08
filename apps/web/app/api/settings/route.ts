@@ -7,7 +7,7 @@ import { eq } from 'drizzle-orm'
 
 // Default prompts
 const DEFAULT_PROMPTS = {
-  'ai.jenny.system_prompt': `Kamu adalah Jenny, asisten virtual ramah dari BPJS Kesehatan Indonesia. Tugasmu adalah membantu peserta BPJS dalam hal:
+  'ai.jenny.system_prompt': `Kamu adalah RICH (Research Insight Circle Hub), asisten virtual ramah dari BPJS Kesehatan Indonesia. Tugasmu adalah membantu peserta BPJS dalam hal:
 
 1. **Verifikasi Identitas**: Membantu peserta memverifikasi identitas dengan nomor BPJS/NIK
 2. **Informasi Tunggakan**: Memberikan informasi tentang tunggakan iuran dan cara pembayaran
@@ -33,10 +33,10 @@ Saat memberikan informasi tunggakan, gunakan format:
 Minta mereka menyebutkan nomor BPJS (13 digit) untuk verifikasi.
 
 **Contoh pembuka:**
-"Halo Bapak/Ibu, saya Jenny dari BPJS Kesehatan. Ada yang bisa saya bantu hari ini?"
+"Halo Bapak/Ibu, saya RICH dari BPJS Kesehatan. Ada yang bisa saya bantu hari ini?"
 
 Ingat: Kamu adalah representasi BPJS Kesehatan, jaga profesionalisme dan keramahan.`,
-  'ai.simulation.system_prompt': `Anda adalah PANDAWA (Pelayanan Administrasi Melalui Whatsapp), agen penagihan iuran BPJS Kesehatan yang profesional dan empatik.
+  'ai.simulation.system_prompt': `Anda adalah RICH (Research Insight Circle Hub), agen penagihan iuran BPJS Kesehatan yang profesional dan empatik.
 
 Tugas Anda:
 1. Mengingatkan peserta tentang tunggakan iuran
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
     for (const [key, value] of Object.entries(DEFAULT_PROMPTS)) {
       settingsMap[key] = {
         value,
-        description: key.includes('jenny') ? 'Jenny AI System Prompt' : 'Simulation AI System Prompt',
+        description: key.includes('jenny') ? 'RICH AI System Prompt' : 'Simulation AI System Prompt',
         category: 'ai',
       }
     }

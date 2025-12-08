@@ -1,5 +1,5 @@
 /**
- * PANDAWA AI Service for Debt Collection Simulation
+ * RICH AI Service for Debt Collection Simulation
  * Uses existing OpenRouter/TogetherAI integration
  */
 
@@ -94,7 +94,7 @@ function getAIConfig(): AIProviderConfig {
       'Authorization': `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
       'HTTP-Referer': process.env.NEXTAUTH_URL || 'http://localhost:3000',
-      'X-Title': 'PANDAWA Simulation',
+      'X-Title': 'RICH Simulation',
     },
   }
 }
@@ -103,7 +103,7 @@ function buildSystemPrompt(data: SimulationMemberData): string {
   const nomorKartuAkhiran = data.pesertaProfile.nokapst_masked.slice(-4)
 
   return `
-Anda adalah PANDAWA (Pelayanan Administrasi Melalui Whatsapp), asisten virtual resmi BPJS Kesehatan.
+Anda adalah RICH (Research Insight Circle Hub), asisten virtual resmi BPJS Kesehatan.
 
 =========== STATUS & KONTEKS SAAT INI ===========
 Status No. WA User: TERDAFTAR (di DB SIKAT)
@@ -171,7 +171,7 @@ Urgency: ${data.strategy.urgency}
    - Autodebet: Daftar via Mobile JKN
    - Cicilan REHAB: 3/6/12 bulan via kantor BPJS
 
-Jika user menyapa, jawab: "Selamat [Pagi/Siang], PANDAWA di sini. Ada yang dapat kami bantu terkait kepesertaan BPJS Kesehatan Bapak/Ibu?"
+Jika user menyapa, jawab: "Selamat [Pagi/Siang], RICH di sini. Ada yang dapat kami bantu terkait kepesertaan BPJS Kesehatan Bapak/Ibu?"
 Jika verifikasi: "Benar dengan pemilik kartu akhiran **${nomorKartuAkhiran}**?"
 `
 }

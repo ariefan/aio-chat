@@ -224,7 +224,7 @@ function SimulationPageContent() {
           </Button>
 
           <div className="flex-1">
-            <h1 className="text-lg font-semibold text-slate-800">Simulasi Penagihan PANDAWA</h1>
+            <h1 className="text-lg font-semibold text-slate-800">Simulasi Penagihan RICH</h1>
             <p className="text-xs text-slate-500">Simulasi percakapan penagihan iuran BPJS</p>
           </div>
 
@@ -362,7 +362,7 @@ function SimulationPageContent() {
                   <div className="h-full flex items-center justify-center bg-slate-50">
                     <div className="text-center text-slate-500">
                       <Smartphone size={48} className="mx-auto mb-4 opacity-50" />
-                      <p className="text-lg font-medium">Simulasi Penagihan PANDAWA</p>
+                      <p className="text-lg font-medium">Simulasi Penagihan RICH</p>
                       <p className="text-sm mt-2">
                         Pilih peserta BPJS dari daftar untuk memulai simulasi
                       </p>
