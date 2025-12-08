@@ -28,10 +28,10 @@ RUN pnpm install --frozen-lockfile
 FROM base AS builder
 WORKDIR /app
 
-# Copy all node_modules from deps (pnpm hoists everything to root)
-COPY --from=deps /app/node_modules ./node_modules
+# Copy entire deps workspace (includes all node_modules and pnpm symlinks)
+COPY --from=deps /app ./
 
-# Copy source code
+# Copy source code (overlays on top of deps output)
 COPY . .
 
 # Disable telemetry
