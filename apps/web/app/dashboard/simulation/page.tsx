@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useCallback, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { ProtectedRoute } from '@/components/protected-route'
 import { CustomerPanel } from '@/components/simulation/customer-panel'
 import { ChatInterface } from '@/components/simulation/chat-interface'
@@ -68,9 +68,11 @@ interface SimulationData {
   }
 }
 
-export default function SimulationPage() {
+function SimulationPageContent() {
   const router = useRouter()
-  const [selectedMemberId, setSelectedMemberId] = useState<string>('')
+  const searchParams = useSearchParams()
+  const initialMemberId = searchParams.get('memberId') || ''
+  const [selectedMemberId, setSelectedMemberId] = useState<string>(initialMemberId)
   const [memberData, setMemberData] = useState<SimulationData | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -308,5 +310,20 @@ export default function SimulationPage() {
         </div>
       </div>
     </ProtectedRoute>
+  )
+}
+
+export default function SimulationPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-screen items-center justify-center bg-slate-100">
+        <div className="text-center">
+          <RefreshCw className="h-8 w-8 animate-spin mx-auto text-green-600" />
+          <p className="mt-2 text-slate-600">Memuat simulasi...</p>
+        </div>
+      </div>
+    }>
+      <SimulationPageContent />
+    </Suspense>
   )
 }

@@ -20,7 +20,11 @@ import {
   Upload,
   X,
   Download,
-  Bot
+  Bot,
+  LayoutDashboard,
+  FileText,
+  Settings,
+  ChevronRight
 } from 'lucide-react'
 
 interface BpjsMember {
@@ -239,36 +243,97 @@ export default function DashboardPage() {
     }
   }
 
+  const menuItems = [
+    { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard', active: true },
+    { icon: Users, label: 'Peserta BPJS', href: '/dashboard', tab: 'members' },
+    { icon: MessageCircle, label: 'Percakapan', href: '/dashboard', tab: 'conversations' },
+    { icon: Bot, label: 'Simulasi PANDAWA', href: '/dashboard/simulation' },
+    { icon: FileText, label: 'Laporan', href: '/dashboard/reports', disabled: true },
+    { icon: Settings, label: 'Pengaturan', href: '/dashboard/settings', disabled: true },
+  ]
+
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gray-50">
-        {/* Header */}
-        <div className="bg-white border-b">
-          <div className="container mx-auto px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Dashboard Jenny BPJS</h1>
-                <p className="text-sm text-gray-600">Selamat datang, {session?.user?.name}</p>
+      <div className="min-h-screen bg-gray-50 flex">
+        {/* Sidebar */}
+        <div className="w-64 bg-white border-r flex flex-col shrink-0 hidden lg:flex">
+          <div className="p-4 border-b">
+            <h1 className="text-xl font-bold text-green-600">Jenny BPJS</h1>
+            <p className="text-xs text-gray-500">AI Chatbot Platform</p>
+          </div>
+          <nav className="flex-1 p-4 space-y-1">
+            {menuItems.map((item, idx) => (
+              <button
+                key={idx}
+                onClick={() => {
+                  if (item.disabled) return
+                  if (item.tab) {
+                    setActiveTab(item.tab as 'members' | 'conversations')
+                  } else {
+                    router.push(item.href)
+                  }
+                }}
+                disabled={item.disabled}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                  item.active || (item.tab && activeTab === item.tab)
+                    ? 'bg-green-50 text-green-700 font-medium'
+                    : item.disabled
+                    ? 'text-gray-300 cursor-not-allowed'
+                    : 'text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                <item.icon className="h-4 w-4" />
+                {item.label}
+                {item.href === '/dashboard/simulation' && (
+                  <Badge variant="default" className="ml-auto text-[10px] px-1.5 py-0">New</Badge>
+                )}
+              </button>
+            ))}
+          </nav>
+          <div className="p-4 border-t">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-medium text-sm">
+                {session?.user?.name?.charAt(0) || 'U'}
               </div>
-              <div className="flex items-center gap-3">
-                <Button variant="default" size="sm" onClick={() => router.push('/dashboard/simulation')}>
-                  <Bot className="h-4 w-4 mr-2" />
-                  Simulasi PANDAWA
-                </Button>
-                <Button variant="outline" size="sm" onClick={fetchData} disabled={loading}>
-                  <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                  Refresh
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => signOut({ callbackUrl: '/auth/signin' })}>
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Keluar
-                </Button>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{session?.user?.name}</p>
+                <p className="text-xs text-gray-500 truncate">{session?.user?.email}</p>
               </div>
+              <Button variant="ghost" size="sm" onClick={() => signOut({ callbackUrl: '/auth/signin' })}>
+                <LogOut className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         </div>
 
-        <div className="container mx-auto px-6 py-6">
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col min-w-0">
+          {/* Header */}
+          <div className="bg-white border-b">
+            <div className="px-6 py-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+                  <p className="text-sm text-gray-600">Selamat datang, {session?.user?.name}</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Button variant="default" size="sm" className="lg:hidden" onClick={() => router.push('/dashboard/simulation')}>
+                    <Bot className="h-4 w-4 mr-2" />
+                    Simulasi
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={fetchData} disabled={loading}>
+                    <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                    Refresh
+                  </Button>
+                  <Button variant="outline" size="sm" className="lg:hidden" onClick={() => signOut({ callbackUrl: '/auth/signin' })}>
+                    <LogOut className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-auto p-6">
           {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
             <Card>
@@ -475,6 +540,7 @@ export default function DashboardPage() {
               )}
             </CardContent>
           </Card>
+          </div>
         </div>
 
         {/* Import Modal */}

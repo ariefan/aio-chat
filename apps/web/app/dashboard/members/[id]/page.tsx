@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui/src/inde
 import { ProtectedRoute } from '@/components/protected-route'
 import { Button } from '@workspace/ui/src/components/button'
 import { Badge } from '@workspace/ui/src/components/badge'
-import { ArrowLeft, User, CreditCard, RefreshCw, Calendar, Phone, Mail, MapPin, Hash } from 'lucide-react'
+import { ArrowLeft, User, CreditCard, RefreshCw, Calendar, Phone, Mail, MapPin, Hash, Activity, MessageSquare, Target, Hospital, Bot } from 'lucide-react'
 
 interface Debt {
   id: string
@@ -35,6 +35,30 @@ interface MemberDetail {
   createdAt: string
   debts: Debt[]
   totalDebt: number
+  // Simulation fields
+  occupation: string | null
+  dependents: number | null
+  totalArrears: number | null
+  arrearsMonths: number | null
+  lastPaymentDate: string | null
+  lastPaymentMethod: string | null
+  lastClaimDate: string | null
+  lastClaimType: string | null
+  lastClaimDiagnosis: string | null
+  lastClaimHospital: string | null
+  lastClaimAmount: number | null
+  lastContactAgent: string | null
+  lastContactDate: string | null
+  lastContactChannel: string | null
+  lastContactOutcome: string | null
+  arrearsReason: string | null
+  credibilityScore: number | null
+  lastPromiseDate: string | null
+  lastPromiseStatus: string | null
+  lastPromiseDaysOverdue: number | null
+  strategyApproach: string | null
+  strategyUrgency: string | null
+  strategyTone: string | null
 }
 
 export default function MemberDetailPage() {
@@ -92,7 +116,7 @@ export default function MemberDetailPage() {
       case 'partial':
         return <Badge className="bg-yellow-500">Sebagian</Badge>
       case 'overdue':
-        return <Badge variant="destructive">Jatuh Tempo</Badge>
+        return <Badge variant="destructive" className="text-white">Jatuh Tempo</Badge>
       case 'written_off':
         return <Badge variant="secondary">Dihapus</Badge>
       default:
@@ -249,6 +273,194 @@ export default function MemberDetailPage() {
                         <p className="text-xs text-gray-500">Lunas</p>
                       </div>
                     </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Simulation Data Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Claim History */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Hospital className="h-5 w-5" />
+                      Riwayat Klaim Terakhir
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {member.lastClaimDate ? (
+                      <>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="text-sm text-gray-500">Tanggal Klaim</label>
+                            <p className="font-medium">{formatDate(member.lastClaimDate)}</p>
+                          </div>
+                          <div>
+                            <label className="text-sm text-gray-500">Tipe</label>
+                            <p>{member.lastClaimType || '-'}</p>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-sm text-gray-500">Rumah Sakit</label>
+                          <p>{member.lastClaimHospital || '-'}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm text-gray-500">Diagnosis</label>
+                          <p className="text-sm">{member.lastClaimDiagnosis || '-'}</p>
+                        </div>
+                        <div className="p-3 bg-blue-50 rounded-lg">
+                          <label className="text-sm text-blue-600">Jumlah Klaim</label>
+                          <p className="text-xl font-bold text-blue-600">
+                            {member.lastClaimAmount ? formatCurrency(member.lastClaimAmount) : '-'}
+                          </p>
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-gray-500 text-center py-4">Belum ada data klaim</p>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Interaction History */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <MessageSquare className="h-5 w-5" />
+                      Riwayat Interaksi Terakhir
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {member.lastContactDate ? (
+                      <>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="text-sm text-gray-500">Tanggal Kontak</label>
+                            <p className="font-medium">{formatDate(member.lastContactDate)}</p>
+                          </div>
+                          <div>
+                            <label className="text-sm text-gray-500">Channel</label>
+                            <Badge variant="outline">{member.lastContactChannel || '-'}</Badge>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-sm text-gray-500">Agent</label>
+                          <p>{member.lastContactAgent || '-'}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm text-gray-500">Hasil</label>
+                          <p>{member.lastContactOutcome || '-'}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm text-gray-500">Alasan Tunggakan</label>
+                          <p className="text-sm">{member.arrearsReason || '-'}</p>
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-gray-500 text-center py-4">Belum ada riwayat interaksi</p>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Credibility & Commitment */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Activity className="h-5 w-5" />
+                      Kredibilitas & Komitmen
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="text-gray-500">Skor Kredibilitas</span>
+                        <span className="font-medium">{((member.credibilityScore || 0.5) * 100).toFixed(0)}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2.5">
+                        <div
+                          className={`h-2.5 rounded-full ${
+                            (member.credibilityScore || 0.5) >= 0.7 ? 'bg-green-500' :
+                            (member.credibilityScore || 0.5) >= 0.4 ? 'bg-yellow-500' : 'bg-red-500'
+                          }`}
+                          style={{ width: `${(member.credibilityScore || 0.5) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                    {member.lastPromiseDate ? (
+                      <div className="p-3 bg-gray-50 rounded-lg space-y-2">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="text-sm text-gray-500">Janji Bayar</label>
+                            <p className="font-medium">{formatDate(member.lastPromiseDate)}</p>
+                          </div>
+                          <div>
+                            <label className="text-sm text-gray-500">Status</label>
+                            <Badge variant={member.lastPromiseStatus === 'fulfilled' ? 'default' : 'destructive'}>
+                              {member.lastPromiseStatus || '-'}
+                            </Badge>
+                          </div>
+                        </div>
+                        {(member.lastPromiseDaysOverdue ?? 0) > 0 && (
+                          <p className="text-sm text-red-600">
+                            Terlambat {member.lastPromiseDaysOverdue} hari
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-gray-500 text-sm">Belum ada komitmen pembayaran</p>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Strategy */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Target className="h-5 w-5" />
+                      Strategi Penagihan
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {member.strategyApproach ? (
+                      <>
+                        <div className="flex flex-wrap gap-2">
+                          <Badge variant="outline" className="bg-blue-50">
+                            {member.strategyApproach}
+                          </Badge>
+                          {member.strategyUrgency && (
+                            <Badge variant={
+                              member.strategyUrgency === 'high' ? 'destructive' :
+                              member.strategyUrgency === 'medium' ? 'default' : 'secondary'
+                            }>
+                              Urgensi: {member.strategyUrgency}
+                            </Badge>
+                          )}
+                          {member.strategyTone && (
+                            <Badge variant="outline">
+                              Tone: {member.strategyTone}
+                            </Badge>
+                          )}
+                        </div>
+                        <Button
+                          className="w-full mt-2"
+                          onClick={() => router.push(`/dashboard/simulation?memberId=${member.id}`)}
+                        >
+                          <Bot className="h-4 w-4 mr-2" />
+                          Mulai Simulasi PANDAWA
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-gray-500 text-sm">Strategi belum ditentukan</p>
+                        <Button
+                          variant="outline"
+                          className="w-full"
+                          onClick={() => router.push(`/dashboard/simulation?memberId=${member.id}`)}
+                        >
+                          <Bot className="h-4 w-4 mr-2" />
+                          Mulai Simulasi PANDAWA
+                        </Button>
+                      </>
+                    )}
                   </CardContent>
                 </Card>
               </div>
