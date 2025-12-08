@@ -7,18 +7,6 @@ import { ProtectedRoute } from '@/components/protected-route'
 import { Button } from '@workspace/ui/src/components/button'
 import { ArrowLeft, Save, RefreshCw, User } from 'lucide-react'
 
-interface MemberData {
-  id: string
-  bpjsId: string
-  name: string
-  nik: string
-  phone: string | null
-  email: string | null
-  address: string | null
-  memberClass: string
-  status: string
-}
-
 export default function EditMemberPage() {
   const params = useParams()
   const router = useRouter()
@@ -29,7 +17,7 @@ export default function EditMemberPage() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
 
-  const [formData, setFormData] = useState<MemberData>({
+  const [formData, setFormData] = useState({
     id: '',
     bpjsId: '',
     name: '',
