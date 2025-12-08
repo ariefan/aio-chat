@@ -13,6 +13,7 @@ import {
 } from '@/db/schema'
 import { eq, and, lte, gte, isNull, desc } from 'drizzle-orm'
 import { getTelegramAdapter } from '@/lib/messaging/telegram-adapter'
+import { getTwilioWhatsAppAdapter } from '@/lib/messaging/twilio-whatsapp-adapter'
 
 // Message templates for due date reminders (takes dueDate string)
 type ReminderTemplate = (name: string, amount: number, dueDate: string) => string
@@ -21,38 +22,38 @@ type OverdueTemplate = (name: string, amount: number, daysOverdue: number) => st
 const REMINDER_TEMPLATES: Record<'reminder_7d' | 'reminder_3d' | 'reminder_1d', ReminderTemplate> = {
   reminder_7d: (name: string, amount: number, dueDate: string) =>
     `Halo Bapak/Ibu ${name},\n\n` +
-    `Saya Jenny dari BPJS Kesehatan. Ini adalah pengingat bahwa iuran BPJS Anda sebesar *Rp ${amount.toLocaleString('id-ID')}* akan jatuh tempo pada *${dueDate}*.\n\n` +
+    `Saya RICH dari BPJS Kesehatan. Ini adalah pengingat bahwa iuran BPJS Anda sebesar *Rp ${amount.toLocaleString('id-ID')}* akan jatuh tempo pada *${dueDate}*.\n\n` +
     `Mohon segera lakukan pembayaran untuk menghindari denda keterlambatan.\n\n` +
-    `Terima kasih atas perhatiannya. 🙏`,
+    `Terima kasih atas perhatiannya.`,
 
   reminder_3d: (name: string, amount: number, dueDate: string) =>
     `Halo Bapak/Ibu ${name},\n\n` +
     `Pengingat: Iuran BPJS Anda sebesar *Rp ${amount.toLocaleString('id-ID')}* akan jatuh tempo dalam *3 hari* (${dueDate}).\n\n` +
     `Segera lakukan pembayaran melalui:\n` +
-    `• Mobile Banking\n` +
-    `• ATM\n` +
-    `• Minimarket terdekat\n\n` +
+    `- Mobile Banking\n` +
+    `- ATM\n` +
+    `- Minimarket terdekat\n\n` +
     `Butuh bantuan? Ketik nomor BPJS Anda untuk informasi lebih lanjut.\n\n` +
-    `Salam,\nJenny - BPJS Kesehatan`,
+    `Salam,\nRICH - BPJS Kesehatan`,
 
   reminder_1d: (name: string, amount: number, dueDate: string) =>
-    `⚠️ *PENGINGAT PENTING*\n\n` +
+    `*PENGINGAT PENTING*\n\n` +
     `Halo Bapak/Ibu ${name},\n\n` +
     `Iuran BPJS Anda sebesar *Rp ${amount.toLocaleString('id-ID')}* akan jatuh tempo *BESOK* (${dueDate}).\n\n` +
     `Mohon segera lakukan pembayaran untuk menghindari:\n` +
-    `• Denda keterlambatan\n` +
-    `• Penonaktifan kartu BPJS\n\n` +
-    `Terima kasih.\n\nJenny - BPJS Kesehatan`,
+    `- Denda keterlambatan\n` +
+    `- Penonaktifan kartu BPJS\n\n` +
+    `Terima kasih.\n\nRICH - BPJS Kesehatan`,
 }
 
 // Overdue template (takes daysOverdue number)
 const OVERDUE_TEMPLATE: OverdueTemplate = (name: string, amount: number, daysOverdue: number) =>
-  `⛔ *TUNGGAKAN BPJS*\n\n` +
+  `*TUNGGAKAN BPJS*\n\n` +
   `Halo Bapak/Ibu ${name},\n\n` +
   `Iuran BPJS Anda sebesar *Rp ${amount.toLocaleString('id-ID')}* telah *melewati jatuh tempo ${daysOverdue} hari*.\n\n` +
   `Mohon segera lakukan pembayaran untuk mengaktifkan kembali layanan BPJS Kesehatan Anda.\n\n` +
   `Ketik nomor BPJS Anda untuk melihat total tunggakan dan cara pembayaran.\n\n` +
-  `Jenny - BPJS Kesehatan`
+  `RICH - BPJS Kesehatan`
 
 /**
  * Generate proactive messages for upcoming due dates
@@ -234,19 +235,31 @@ export async function sendPendingMessages(): Promise<number> {
       )
       .limit(50) // Process in batches
 
-    const telegramAdapter = getTelegramAdapter()
-
     for (const { message, member, user } of pendingMessages) {
       try {
-        // Only send if user is linked via Telegram
-        if (!user || user.platformType !== 'telegram') {
-          console.log(`⏭️ Skipping message for ${member.name} - no Telegram user linked`)
+        // Skip if no user linked
+        if (!user) {
+          console.log(`Skipping message for ${member.name} - no user linked`)
           continue
         }
 
-        // Send message via Telegram
-        const chatId = parseInt(user.platformId, 10)
-        await telegramAdapter.sendMessage(chatId, message.content, { parse_mode: 'Markdown' })
+        // Send via appropriate platform
+        if (user.platformType === 'telegram') {
+          const telegramAdapter = getTelegramAdapter()
+          const chatId = parseInt(user.platformId, 10)
+          await telegramAdapter.sendMessage(chatId, message.content, { parse_mode: 'Markdown' })
+        } else if (user.platformType === 'whatsapp') {
+          try {
+            const twilioAdapter = getTwilioWhatsAppAdapter()
+            await twilioAdapter.sendMessage(`whatsapp:+${user.platformId}`, message.content)
+          } catch (waError) {
+            console.log(`WhatsApp not configured, skipping message for ${member.name}`)
+            continue
+          }
+        } else {
+          console.log(`Skipping message for ${member.name} - unsupported platform: ${user.platformType}`)
+          continue
+        }
 
         // Update message status
         await db
