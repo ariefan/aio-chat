@@ -16,7 +16,8 @@
       "Bash(git push:*)",
       "Bash(ssh:*)",
       "WebFetch(domain:18.140.254.61)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(DATABASE_URL=\"postgresql://dokploy:amukds4wi9001583845717ad2@18.140.254.61:5555/aio-chat\" pnpm db:push:*)"
     ],
     "deny": [],
     "ask": []
