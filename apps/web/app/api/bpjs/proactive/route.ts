@@ -44,7 +44,11 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Failed to fetch proactive messages:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch messages' },
+      {
+        error: 'Failed to fetch messages',
+        details: error instanceof Error ? error.message : 'Unknown error',
+        stack: process.env.NODE_ENV === 'development' && error instanceof Error ? error.stack : undefined
+      },
       { status: 500 }
     )
   }
@@ -102,7 +106,11 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Failed to process proactive action:', error)
     return NextResponse.json(
-      { error: 'Failed to process action' },
+      {
+        error: 'Failed to process action',
+        details: error instanceof Error ? error.message : 'Unknown error',
+        stack: process.env.NODE_ENV === 'development' && error instanceof Error ? error.stack : undefined
+      },
       { status: 500 }
     )
   }

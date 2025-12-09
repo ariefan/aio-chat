@@ -12,8 +12,26 @@ import {
   users,
 } from '@/db/schema'
 import { eq, and, lte, gte, isNull, desc } from 'drizzle-orm'
-import { getTelegramAdapter } from '@/lib/messaging/telegram-adapter'
-import { getTwilioWhatsAppAdapter } from '@/lib/messaging/twilio-whatsapp-adapter'
+// Lazy import adapters to avoid initialization errors
+function getTelegramAdapterSafe() {
+  try {
+    const { getTelegramAdapter } = require('@/lib/messaging/telegram-adapter')
+    return getTelegramAdapter()
+  } catch (error) {
+    console.warn('Telegram adapter not available:', error instanceof Error ? error.message : error)
+    return null
+  }
+}
+
+function getTwilioWhatsAppAdapterSafe() {
+  try {
+    const { getTwilioWhatsAppAdapter } = require('@/lib/messaging/twilio-whatsapp-adapter')
+    return getTwilioWhatsAppAdapter()
+  } catch (error) {
+    console.warn('Twilio WhatsApp adapter not available:', error instanceof Error ? error.message : error)
+    return null
+  }
+}
 
 // Message templates for due date reminders (takes dueDate string)
 type ReminderTemplate = (name: string, amount: number, dueDate: string) => string
@@ -245,17 +263,20 @@ export async function sendPendingMessages(): Promise<number> {
 
         // Send via appropriate platform
         if (user.platformType === 'telegram') {
-          const telegramAdapter = getTelegramAdapter()
+          const telegramAdapter = getTelegramAdapterSafe()
+          if (!telegramAdapter) {
+            console.log(`Telegram not configured, skipping message for ${member.name}`)
+            continue
+          }
           const chatId = parseInt(user.platformId, 10)
           await telegramAdapter.sendMessage(chatId, message.content, { parse_mode: 'Markdown' })
         } else if (user.platformType === 'whatsapp') {
-          try {
-            const twilioAdapter = getTwilioWhatsAppAdapter()
-            await twilioAdapter.sendMessage(`whatsapp:+${user.platformId}`, message.content)
-          } catch (waError) {
+          const twilioAdapter = getTwilioWhatsAppAdapterSafe()
+          if (!twilioAdapter) {
             console.log(`WhatsApp not configured, skipping message for ${member.name}`)
             continue
           }
+          await twilioAdapter.sendMessage(`whatsapp:+${user.platformId}`, message.content)
         } else {
           console.log(`Skipping message for ${member.name} - unsupported platform: ${user.platformType}`)
           continue
