@@ -117,7 +117,7 @@ const dummyMembers = [
 function generateTestDebts(memberId: string, memberClass: string, memberIndex: number) {
   const debts = []
   const now = new Date()
-  const rate = CONTRIBUTION_RATES[memberClass] || CONTRIBUTION_RATES['3']
+  const rate = CONTRIBUTION_RATES[memberClass] ?? CONTRIBUTION_RATES['3']!
 
   // Different due dates for testing scheduler triggers:
   // Members 0-2: Due in 7 days (reminder_7d)

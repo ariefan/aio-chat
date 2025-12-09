@@ -10,7 +10,13 @@
       "Bash(DATABASE_URL=\"postgresql://postgres:postgres@localhost:5432/aio-chat\" pnpm drizzle-kit push:*)",
       "Bash(git reset:*)",
       "WebFetch(domain:genai.technosmart.id)",
-      "Bash(DATABASE_URL=\"postgresql://postgres:postgres@localhost:5432/aio-chat\" npx drizzle-kit push:*)"
+      "Bash(DATABASE_URL=\"postgresql://postgres:postgres@localhost:5432/aio-chat\" npx drizzle-kit push:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(ssh:*)",
+      "WebFetch(domain:18.140.254.61)",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []
