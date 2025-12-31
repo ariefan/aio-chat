@@ -1,10 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { getTelegramAdapter } from '@/lib/messaging/telegram-adapter'
+import {
+  checkRateLimit,
+  getClientIdentifier,
+  RATE_LIMITS,
+  rateLimitExceededResponse,
+  createRateLimitHeaders,
+} from '@/lib/rate-limiter'
 
 // Telegram doesn't provide webhook signature verification like WhatsApp
 // So we'll rely on the Telegram Bot API security model
 export async function POST(request: NextRequest) {
+  // Rate limiting
+  const clientId = getClientIdentifier(request)
+  const rateCheck = checkRateLimit(clientId, RATE_LIMITS.webhook)
+  if (!rateCheck.allowed) {
+    return rateLimitExceededResponse(rateCheck.retryAfter!)
+  }
+
   try {
     // Verify content type
     const contentType = request.headers.get('content-type')

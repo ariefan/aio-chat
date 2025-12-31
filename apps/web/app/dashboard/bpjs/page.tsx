@@ -13,6 +13,13 @@ import {
   RefreshCw,
   CreditCard,
 } from 'lucide-react'
+import { toast } from 'sonner'
+import { StatusBadge } from '@/components/ui/status-badge'
+import { LoadingSpinner, SectionLoader } from '@/components/ui/loading-spinner'
+import { EmptyState, EmptySection } from '@/components/ui/empty-state'
+import { ConfirmDialog } from '@/components/ui/confirm-dialog'
+import { formatCurrency, formatDateShort } from '@/lib/utils'
+import { useDebounce } from '@/hooks/use-debounce'
 
 interface BpjsMember {
   id: string
@@ -45,6 +52,7 @@ export default function BpjsManagementPage() {
   const [memberDebts, setMemberDebts] = useState<BpjsDebt[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const debouncedSearch = useDebounce(search, 300) // Debounce search input
   const [showAddModal, setShowAddModal] = useState(false)
   const [showDebtModal, setShowDebtModal] = useState(false)
 
@@ -66,10 +74,16 @@ export default function BpjsManagementPage() {
     dueDate: '',
   })
 
-  const fetchMembers = async () => {
+  // Delete confirmation
+  const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; memberId: string | null }>({
+    open: false,
+    memberId: null,
+  })
+
+  const fetchMembers = async (searchQuery: string = '') => {
     try {
       setLoading(true)
-      const res = await fetch(`/api/bpjs/members?search=${search}`)
+      const res = await fetch(`/api/bpjs/members?search=${encodeURIComponent(searchQuery)}`)
       const data = await res.json()
       setMembers(data.members || [])
     } catch (error) {
@@ -90,8 +104,8 @@ export default function BpjsManagementPage() {
   }
 
   useEffect(() => {
-    fetchMembers()
-  }, [search])
+    fetchMembers(debouncedSearch)
+  }, [debouncedSearch])
 
   useEffect(() => {
     if (selectedMember) {
@@ -117,10 +131,21 @@ export default function BpjsManagementPage() {
           email: '',
           memberClass: '3',
         })
+        toast.success('Peserta Ditambahkan', {
+          description: `${newMember.name} berhasil ditambahkan`,
+        })
         fetchMembers()
+      } else {
+        const error = await res.json()
+        toast.error('Gagal Menambahkan', {
+          description: error.message || 'Terjadi kesalahan',
+        })
       }
     } catch (error) {
       console.error('Failed to add member:', error)
+      toast.error('Gagal Menambahkan', {
+        description: 'Terjadi kesalahan saat menambahkan peserta',
+      })
     }
   }
 
@@ -139,31 +164,58 @@ export default function BpjsManagementPage() {
 
       if (res.ok) {
         setShowDebtModal(false)
+        toast.success('Tunggakan Ditambahkan', {
+          description: `Tunggakan baru untuk ${selectedMember.name} berhasil ditambahkan`,
+        })
         fetchMemberDebts(selectedMember.id)
         fetchMembers()
+      } else {
+        toast.error('Gagal Menambahkan', {
+          description: 'Terjadi kesalahan saat menambahkan tunggakan',
+        })
       }
     } catch (error) {
       console.error('Failed to add debt:', error)
+      toast.error('Gagal Menambahkan', {
+        description: 'Terjadi kesalahan saat menambahkan tunggakan',
+      })
     }
   }
 
-  const handleDeleteMember = async (id: string) => {
-    if (!confirm('Yakin hapus peserta ini?')) return
+  const handleDeleteClick = (id: string) => {
+    setDeleteConfirm({ open: true, memberId: id })
+  }
+
+  const handleDeleteConfirm = async () => {
+    const id = deleteConfirm.memberId
+    if (!id) return
+
+    setDeleteConfirm({ open: false, memberId: null })
 
     try {
       await fetch(`/api/bpjs/members/${id}`, { method: 'DELETE' })
+      toast.success('Peserta Dihapus', {
+        description: 'Data peserta berhasil dihapus',
+      })
       fetchMembers()
       if (selectedMember?.id === id) {
         setSelectedMember(null)
       }
     } catch (error) {
       console.error('Failed to delete member:', error)
+      toast.error('Gagal Menghapus', {
+        description: 'Terjadi kesalahan saat menghapus data peserta',
+      })
     }
+  }
+
+  const handleDeleteCancel = () => {
+    setDeleteConfirm({ open: false, memberId: null })
   }
 
   const handleMarkPaid = async (debtId: string, amount: number) => {
     try {
-      await fetch(`/api/bpjs/debts/${debtId}`, {
+      const res = await fetch(`/api/bpjs/debts/${debtId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -171,28 +223,34 @@ export default function BpjsManagementPage() {
           paymentMethod: 'manual',
         }),
       })
-      if (selectedMember) {
-        fetchMemberDebts(selectedMember.id)
-        fetchMembers()
+      if (res.ok) {
+        toast.success('Pembayaran Dicatat', {
+          description: `Pembayaran ${formatCurrency(amount)} berhasil dicatat`,
+        })
+        if (selectedMember) {
+          fetchMemberDebts(selectedMember.id)
+          fetchMembers()
+        }
+      } else {
+        toast.error('Gagal Mencatat', {
+          description: 'Terjadi kesalahan saat mencatat pembayaran',
+        })
       }
     } catch (error) {
       console.error('Failed to mark paid:', error)
+      toast.error('Gagal Mencatat', {
+        description: 'Terjadi kesalahan saat mencatat pembayaran',
+      })
     }
   }
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'active':
-        return <Badge className="bg-green-100 text-green-800">Aktif</Badge>
-      case 'overdue':
-        return <Badge className="bg-red-100 text-red-800">Terlambat</Badge>
-      case 'paid':
-        return <Badge className="bg-blue-100 text-blue-800">Lunas</Badge>
-      case 'suspended':
-        return <Badge className="bg-yellow-100 text-yellow-800">Ditangguhkan</Badge>
-      default:
-        return <Badge>{status}</Badge>
-    }
+  // Status badge helper - now using centralized StatusBadge component with proper types
+  const getMemberStatusBadge = (status: string) => {
+    return <StatusBadge status={status} type="member" />
+  }
+
+  const getDebtStatusBadge = (status: string) => {
+    return <StatusBadge status={status} type="debt" />
   }
 
   const months = [
@@ -208,7 +266,7 @@ export default function BpjsManagementPage() {
           <p className="text-muted-foreground">Kelola data peserta dan tunggakan</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={fetchMembers}>
+          <Button variant="outline" onClick={() => fetchMembers(debouncedSearch)}>
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>
@@ -241,11 +299,13 @@ export default function BpjsManagementPage() {
           </CardHeader>
           <CardContent className="max-h-[600px] overflow-y-auto">
             {loading ? (
-              <div className="text-center py-8 text-muted-foreground">Memuat...</div>
+              <SectionLoader text="Memuat data peserta..." />
             ) : members.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                Tidak ada data peserta
-              </div>
+              <EmptySection
+                icon={Users}
+                title="Tidak ada data peserta"
+                description="Gunakan tombol Tambah Peserta untuk menambahkan data"
+              />
             ) : (
               <div className="space-y-3">
                 {members.map((member) => (
@@ -266,13 +326,13 @@ export default function BpjsManagementPage() {
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
-                        {getStatusBadge(member.status)}
+                        {getMemberStatusBadge(member.status)}
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={(e) => {
                             e.stopPropagation()
-                            handleDeleteMember(member.id)
+                            handleDeleteClick(member.id)
                           }}
                         >
                           <Trash2 className="h-4 w-4 text-red-500" />
@@ -283,7 +343,7 @@ export default function BpjsManagementPage() {
                       <div className="mt-2 flex items-center gap-2 text-sm">
                         <AlertCircle className="h-4 w-4 text-red-500" />
                         <span className="text-red-600 font-medium">
-                          Tunggakan: Rp {member.totalDebt.toLocaleString('id-ID')}
+                          Tunggakan: {formatCurrency(member.totalDebt)}
                         </span>
                         {member.overdueCount > 0 && (
                           <Badge variant="destructive" className="text-xs">
@@ -317,9 +377,11 @@ export default function BpjsManagementPage() {
           </CardHeader>
           <CardContent>
             {!selectedMember ? (
-              <div className="text-center py-8 text-muted-foreground">
-                Pilih peserta untuk melihat tunggakan
-              </div>
+              <EmptySection
+                icon={CreditCard}
+                title="Pilih peserta"
+                description="Pilih peserta dari daftar untuk melihat detail tunggakan"
+              />
             ) : (
               <div className="space-y-4">
                 {/* Member info */}
@@ -335,10 +397,11 @@ export default function BpjsManagementPage() {
 
                 {/* Debts list */}
                 {memberDebts.length === 0 ? (
-                  <div className="text-center py-4 text-muted-foreground">
-                    <CheckCircle className="h-8 w-8 mx-auto mb-2 text-green-500" />
-                    Tidak ada tunggakan
-                  </div>
+                  <EmptySection
+                    icon={CheckCircle}
+                    title="Tidak ada tunggakan"
+                    description="Peserta ini tidak memiliki tunggakan aktif"
+                  />
                 ) : (
                   <div className="space-y-3">
                     {memberDebts.map((debt) => (
@@ -352,19 +415,19 @@ export default function BpjsManagementPage() {
                               {months[debt.periodMonth - 1]} {debt.periodYear}
                             </p>
                             <p className="text-sm text-muted-foreground">
-                              Jatuh tempo: {new Date(debt.dueDate).toLocaleDateString('id-ID')}
+                              Jatuh tempo: {formatDateShort(debt.dueDate)}
                             </p>
                           </div>
-                          {getStatusBadge(debt.status)}
+                          {getDebtStatusBadge(debt.status)}
                         </div>
                         <div className="mt-2 flex items-center justify-between">
                           <div>
                             <p className="font-medium text-lg">
-                              Rp {debt.amount.toLocaleString('id-ID')}
+                              {formatCurrency(debt.amount)}
                             </p>
                             {debt.lateFee > 0 && (
                               <p className="text-xs text-red-500">
-                                + Denda: Rp {debt.lateFee.toLocaleString('id-ID')}
+                                + Denda: {formatCurrency(debt.lateFee)}
                               </p>
                             )}
                           </div>
@@ -493,6 +556,18 @@ export default function BpjsManagementPage() {
           </Card>
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={deleteConfirm.open}
+        onConfirm={handleDeleteConfirm}
+        onCancel={handleDeleteCancel}
+        title="Hapus Peserta?"
+        message="Data peserta dan tunggakan terkait akan dihapus secara permanen. Tindakan ini tidak dapat dibatalkan."
+        confirmText="Ya, Hapus"
+        cancelText="Batal"
+        variant="danger"
+      />
     </div>
   )
 }

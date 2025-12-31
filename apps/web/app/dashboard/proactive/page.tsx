@@ -15,6 +15,11 @@ import {
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { id as idLocale } from 'date-fns/locale'
+import { toast } from 'sonner'
+import { StatusBadge } from '@/components/ui/status-badge'
+import { LoadingSpinner } from '@/components/ui/loading-spinner'
+import { EmptySection } from '@/components/ui/empty-state'
+import { formatRelativeTime } from '@/lib/utils'
 
 interface ProactiveMessage {
   id: string
@@ -84,11 +89,15 @@ export default function ProactivePage() {
         body: JSON.stringify({ action: 'run_scheduler' }),
       })
       const data = await res.json()
-      alert(`Scheduler selesai!\nGenerated: ${data.generated}\nSent: ${data.sent}`)
+      toast.success('Scheduler Selesai', {
+        description: `Generated: ${data.generated} | Sent: ${data.sent}`,
+      })
       fetchMessages()
     } catch (error) {
       console.error('Failed to run scheduler:', error)
-      alert('Gagal menjalankan scheduler')
+      toast.error('Gagal Menjalankan Scheduler', {
+        description: 'Terjadi kesalahan saat menjalankan scheduler',
+      })
     } finally {
       setActionLoading(false)
     }
@@ -103,11 +112,15 @@ export default function ProactivePage() {
         body: JSON.stringify({ action: 'send_pending' }),
       })
       const data = await res.json()
-      alert(`Berhasil mengirim ${data.sent} pesan!`)
+      toast.success('Pesan Terkirim', {
+        description: `Berhasil mengirim ${data.sent} pesan`,
+      })
       fetchMessages()
     } catch (error) {
       console.error('Failed to send pending:', error)
-      alert('Gagal mengirim pesan')
+      toast.error('Gagal Mengirim', {
+        description: 'Terjadi kesalahan saat mengirim pesan',
+      })
     } finally {
       setActionLoading(false)
     }
@@ -115,7 +128,9 @@ export default function ProactivePage() {
 
   const triggerMessage = async () => {
     if (!selectedMemberId) {
-      alert('Pilih peserta terlebih dahulu')
+      toast.warning('Pilih Peserta', {
+        description: 'Pilih peserta terlebih dahulu sebelum mengirim pesan test',
+      })
       return
     }
 
@@ -133,31 +148,22 @@ export default function ProactivePage() {
       const data = await res.json()
 
       if (data.success) {
-        alert('Pesan berhasil dikirim!')
+        toast.success('Pesan Test Terkirim', {
+          description: 'Pesan berhasil dikirim ke peserta',
+        })
         fetchMessages()
       } else {
-        alert('Gagal mengirim pesan')
+        toast.error('Gagal Mengirim', {
+          description: 'Pesan gagal dikirim',
+        })
       }
     } catch (error) {
       console.error('Failed to trigger message:', error)
-      alert('Gagal mengirim pesan')
+      toast.error('Gagal Mengirim', {
+        description: 'Terjadi kesalahan saat mengirim pesan',
+      })
     } finally {
       setActionLoading(false)
-    }
-  }
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'sent':
-        return <Badge className="bg-green-100 text-green-800">Terkirim</Badge>
-      case 'pending':
-        return <Badge className="bg-yellow-100 text-yellow-800">Pending</Badge>
-      case 'failed':
-        return <Badge className="bg-red-100 text-red-800">Gagal</Badge>
-      case 'cancelled':
-        return <Badge className="bg-gray-100 text-gray-800">Dibatalkan</Badge>
-      default:
-        return <Badge>{status}</Badge>
     }
   }
 
@@ -312,12 +318,13 @@ export default function ProactivePage() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="text-center py-8 text-muted-foreground">Memuat...</div>
+            <LoadingSpinner size="md" text="Memuat pesan..." centered />
           ) : messages.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Bell className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>Tidak ada pesan proaktif</p>
-            </div>
+            <EmptySection
+              icon={Bell}
+              title="Tidak ada pesan proaktif"
+              description={statusFilter !== 'all' ? `Tidak ada pesan dengan status ${statusFilter}` : 'Jalankan scheduler untuk membuat pesan'}
+            />
           ) : (
             <div className="space-y-4">
               {messages.map((msg) => (
@@ -331,7 +338,7 @@ export default function ProactivePage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <Badge variant="outline">{getTypeLabel(msg.messageType)}</Badge>
-                      {getStatusBadge(msg.status)}
+                      <StatusBadge status={msg.status} type="message" />
                     </div>
                   </div>
                   <div className="p-3 bg-gray-50 rounded-md text-sm whitespace-pre-wrap mb-2">
@@ -342,18 +349,12 @@ export default function ProactivePage() {
                     <div className="flex items-center gap-4">
                       <span className="flex items-center gap-1">
                         <Clock className="h-3 w-3" />
-                        Dijadwalkan: {formatDistanceToNow(new Date(msg.scheduledAt), {
-                          addSuffix: true,
-                          locale: idLocale,
-                        })}
+                        Dijadwalkan: {formatRelativeTime(msg.scheduledAt)}
                       </span>
                       {msg.sentAt && (
                         <span className="flex items-center gap-1">
                           <CheckCircle className="h-3 w-3 text-green-500" />
-                          Dikirim: {formatDistanceToNow(new Date(msg.sentAt), {
-                            addSuffix: true,
-                            locale: idLocale,
-                          })}
+                          Dikirim: {formatRelativeTime(msg.sentAt)}
                         </span>
                       )}
                     </div>

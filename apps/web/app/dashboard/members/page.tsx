@@ -14,7 +14,12 @@ import {
   X,
   Download,
   RefreshCw,
+  Users,
 } from 'lucide-react'
+import { StatusBadge } from '@/components/ui/status-badge'
+import { LoadingSpinner, ButtonLoader } from '@/components/ui/loading-spinner'
+import { EmptyTable } from '@/components/ui/empty-state'
+import { formatCurrency } from '@/lib/utils'
 
 interface BpjsMember {
   id: string
@@ -63,10 +68,6 @@ export default function MembersPage() {
     m.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     m.bpjsId.includes(searchTerm)
   )
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(amount)
-  }
 
   // CSV parsing
   const parseCSV = (text: string) => {
@@ -202,9 +203,8 @@ export default function MembersPage() {
       <Card>
         <CardContent className="p-0">
           {loading ? (
-            <div className="p-8 text-center text-gray-500">
-              <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-2" />
-              Memuat data...
+            <div className="p-8">
+              <LoadingSpinner size="lg" text="Memuat data peserta..." centered />
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -222,11 +222,11 @@ export default function MembersPage() {
                 </thead>
                 <tbody>
                   {filteredMembers.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="p-8 text-center text-gray-500">
-                        {searchTerm ? 'Tidak ditemukan' : 'Belum ada data peserta. Klik "Import CSV" untuk mengimpor data.'}
-                      </td>
-                    </tr>
+                    <EmptyTable
+                      icon={Users}
+                      title={searchTerm ? 'Tidak ditemukan' : 'Belum ada data peserta'}
+                      description={searchTerm ? 'Coba gunakan kata kunci lain' : 'Klik "Import CSV" untuk mengimpor data peserta'}
+                    />
                   ) : filteredMembers.map(member => (
                     <tr key={member.id} className="border-b hover:bg-gray-50">
                       <td className="p-4 font-mono text-sm">{member.bpjsId}</td>
@@ -234,9 +234,7 @@ export default function MembersPage() {
                       <td className="p-4">{member.phone || '-'}</td>
                       <td className="p-4">Kelas {member.memberClass}</td>
                       <td className="p-4">
-                        <Badge variant={member.status === 'active' ? 'default' : 'secondary'}>
-                          {member.status === 'active' ? 'Aktif' : member.status}
-                        </Badge>
+                        <StatusBadge status={member.status} type="member" />
                       </td>
                       <td className="p-4 font-semibold text-red-600">
                         {member.totalDebt > 0 ? formatCurrency(member.totalDebt) : '-'}
@@ -364,8 +362,8 @@ export default function MembersPage() {
                 >
                   {importing ? (
                     <>
-                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                      Mengimpor...
+                      <LoadingSpinner size="sm" />
+                      <span className="ml-2">Mengimpor...</span>
                     </>
                   ) : (
                     <>

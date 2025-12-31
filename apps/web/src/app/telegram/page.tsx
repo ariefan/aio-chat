@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { Button, Input, Card, CardContent, CardDescription, CardHeader, CardTitle, Alert, AlertDescription, Badge } from '@workspace/ui'
-import { MessageCircle, Send, Settings, Bot, User, CheckCircle, AlertCircle } from 'lucide-react'
+import { MessageCircle, Send, Settings, Bot, User, CheckCircle, AlertCircle, Info } from 'lucide-react'
+import { toast } from 'sonner'
 
 export default function TelegramPage() {
   const { data: session, status } = useSession()
@@ -39,7 +40,9 @@ export default function TelegramPage() {
 
   const handleSetupWebhook = async () => {
     if (!telegramToken) {
-      alert('Please enter your Telegram Bot Token')
+      toast.warning('Token Diperlukan', {
+        description: 'Masukkan Telegram Bot Token Anda',
+      })
       return
     }
 
@@ -59,15 +62,21 @@ export default function TelegramPage() {
       const data = await response.json()
 
       if (data.success) {
-        alert('Telegram setup instructions generated! Check the console for details.')
+        toast.success('Telegram Setup Berhasil', {
+          description: 'Instruksi setup telah digenerate. Cek console untuk detail.',
+        })
         console.log('Telegram Setup Instructions:', data.instructions)
         console.log('Set Webhook Command:', data.webhookSetup.setWebhookCommand)
       } else {
-        alert('Failed to setup Telegram: ' + data.error)
+        toast.error('Setup Gagal', {
+          description: data.error || 'Gagal setup Telegram',
+        })
       }
     } catch (error) {
       console.error('Setup error:', error)
-      alert('Failed to setup Telegram. Check console for details.')
+      toast.error('Setup Gagal', {
+        description: 'Gagal setup Telegram. Cek console untuk detail.',
+      })
     } finally {
       setIsLoading(false)
     }
@@ -75,7 +84,9 @@ export default function TelegramPage() {
 
   const handleSendMessage = async () => {
     if (!testChatId || !testMessage) {
-      alert('Please enter Chat ID and Message')
+      toast.warning('Data Tidak Lengkap', {
+        description: 'Masukkan Chat ID dan Pesan',
+      })
       return
     }
 
@@ -113,7 +124,10 @@ export default function TelegramPage() {
   }
 
   const handleGetChatId = () => {
-    alert('To get your Chat ID:\n1. Send a message to @RawDataBot\n2. It will reply with your chat ID\n3. Copy that ID into the Chat ID field')
+    toast.info('Cara Mendapatkan Chat ID', {
+      description: '1. Kirim pesan ke @RawDataBot di Telegram\n2. Bot akan membalas dengan Chat ID Anda\n3. Copy ID tersebut ke field Chat ID',
+      duration: 10000,
+    })
   }
 
   if (status === 'loading' || !session) {

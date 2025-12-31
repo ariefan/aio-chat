@@ -2,8 +2,21 @@ import { NextRequest, NextResponse } from "next/server"
 import bcrypt from "bcryptjs"
 import { db, operators } from "@/db"
 import { eq } from "drizzle-orm"
+import {
+  checkRateLimit,
+  getClientIdentifier,
+  RATE_LIMITS,
+  rateLimitExceededResponse,
+} from '@/lib/rate-limiter'
 
 export async function POST(request: NextRequest) {
+  // Rate limiting - strict limits to prevent brute force / enumeration
+  const clientId = getClientIdentifier(request)
+  const rateCheck = checkRateLimit(clientId, RATE_LIMITS.auth)
+  if (!rateCheck.allowed) {
+    return rateLimitExceededResponse(rateCheck.retryAfter!)
+  }
+
   try {
     const { name, email, password } = await request.json()
 

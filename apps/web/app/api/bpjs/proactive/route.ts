@@ -7,9 +7,22 @@ import {
   triggerProactiveMessage,
   sendPendingMessages,
 } from '@/lib/scheduler/proactive-scheduler'
+import {
+  checkRateLimit,
+  getClientIdentifier,
+  RATE_LIMITS,
+  rateLimitExceededResponse,
+} from '@/lib/rate-limiter'
 
 // GET - List proactive messages
 export async function GET(request: NextRequest) {
+  // Rate limiting - use API limits for read operations
+  const clientId = getClientIdentifier(request)
+  const rateCheck = checkRateLimit(clientId, RATE_LIMITS.api)
+  if (!rateCheck.allowed) {
+    return rateLimitExceededResponse(rateCheck.retryAfter!)
+  }
+
   try {
     const searchParams = request.nextUrl.searchParams
     const status = searchParams.get('status')
@@ -56,6 +69,13 @@ export async function GET(request: NextRequest) {
 
 // POST - Trigger proactive message or run scheduler
 export async function POST(request: NextRequest) {
+  // Rate limiting - scheduler operations are expensive, use strict limits
+  const clientId = getClientIdentifier(request)
+  const rateCheck = checkRateLimit(clientId, RATE_LIMITS.scheduler)
+  if (!rateCheck.allowed) {
+    return rateLimitExceededResponse(rateCheck.retryAfter!)
+  }
+
   try {
     const body = await request.json()
     const { action, memberId, messageType } = body

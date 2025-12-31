@@ -4,6 +4,12 @@ import {
   getWhatsAppAdapter,
   type WhatsAppWebhookPayload,
 } from '@/lib/messaging/whatsapp-adapter'
+import {
+  checkRateLimit,
+  getClientIdentifier,
+  RATE_LIMITS,
+  rateLimitExceededResponse,
+} from '@/lib/rate-limiter'
 
 /**
  * WhatsApp Cloud API Webhook Handler
@@ -35,6 +41,13 @@ function verifyWebhookSignature(
 
 // POST - Handle incoming webhook events
 export async function POST(request: NextRequest) {
+  // Rate limiting
+  const clientId = getClientIdentifier(request)
+  const rateCheck = checkRateLimit(clientId, RATE_LIMITS.webhook)
+  if (!rateCheck.allowed) {
+    return rateLimitExceededResponse(rateCheck.retryAfter!)
+  }
+
   try {
     const rawBody = await request.text()
 

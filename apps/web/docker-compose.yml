@@ -111,6 +111,30 @@ services:
       --save 60 10000
 
   # =============================================================================
+  # PROACTIVE MESSAGE SCHEDULER
+  # =============================================================================
+  scheduler:
+    build:
+      context: ../..
+      dockerfile: apps/web/Dockerfile
+      target: deps
+    working_dir: /app/apps/web
+    command: ["pnpm", "scheduler:daemon"]
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/aio_chat_poc
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID}
+      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}
+      - TWILIO_WHATSAPP_FROM=${TWILIO_WHATSAPP_FROM}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - aio-chat-network
+
+  # =============================================================================
   # NGINX REVERSE PROXY (Production Ready)
   # =============================================================================
   nginx:

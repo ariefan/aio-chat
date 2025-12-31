@@ -21,6 +21,10 @@ import { formatDistanceToNow } from 'date-fns'
 import { id as idLocale } from 'date-fns/locale'
 import { Button } from '@workspace/ui/src/components/button'
 import { Badge } from '@workspace/ui/src/components/badge'
+import { StatusBadge } from '@/components/ui/status-badge'
+import { LoadingSpinner } from '@/components/ui/loading-spinner'
+import { EmptySection } from '@/components/ui/empty-state'
+import { formatTime as sharedFormatTime, formatRelativeTime as sharedFormatRelativeTime } from '@/lib/utils'
 
 interface Message {
   id: string
@@ -154,45 +158,6 @@ function ConversationsPageContent() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [conversationDetail?.messages])
 
-  const formatTime = (dateStr: string | null) => {
-    if (!dateStr) return ''
-    try {
-      return new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    } catch {
-      return ''
-    }
-  }
-
-  const formatRelativeTime = (dateStr: string | null) => {
-    if (!dateStr) return '-'
-    try {
-      return formatDistanceToNow(new Date(dateStr), { addSuffix: true, locale: idLocale })
-    } catch {
-      return '-'
-    }
-  }
-
-  const getPlatformBadge = (platform: string | null) => {
-    switch (platform) {
-      case 'telegram':
-        return <Badge className="bg-blue-500 text-white text-[10px] px-1.5 py-0">TG</Badge>
-      case 'whatsapp':
-        return <Badge className="bg-green-500 text-white text-[10px] px-1.5 py-0">WA</Badge>
-      default:
-        return null
-    }
-  }
-
-  const getStatusBadge = (status: string | null) => {
-    switch (status) {
-      case 'verified':
-        return <Badge className="bg-blue-100 text-blue-800 text-[10px] px-1.5 py-0">Verified</Badge>
-      case 'active':
-        return <Badge className="bg-green-100 text-green-800 text-[10px] px-1.5 py-0">Active</Badge>
-      default:
-        return null
-    }
-  }
 
   // Filter conversations by search
   const filteredConversations = conversations.filter(conv => {
@@ -259,14 +224,15 @@ function ConversationsPageContent() {
             {/* Conversation List */}
             <div className="flex-1 overflow-y-auto">
               {loading ? (
-                <div className="flex items-center justify-center py-8">
-                  <RefreshCw className="h-6 w-6 animate-spin text-slate-400" />
+                <div className="py-8">
+                  <LoadingSpinner size="md" centered />
                 </div>
               ) : filteredConversations.length === 0 ? (
-                <div className="text-center py-8 text-slate-500">
-                  <MessageCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p>Belum ada percakapan</p>
-                </div>
+                <EmptySection
+                  icon={MessageCircle}
+                  title="Belum ada percakapan"
+                  description={searchQuery ? "Tidak ditemukan" : "Percakapan akan muncul di sini"}
+                />
               ) : (
                 <div className="divide-y">
                   {filteredConversations.map((conv) => (
@@ -288,10 +254,22 @@ function ConversationsPageContent() {
                             <p className="font-medium text-sm truncate">
                               {conv.userName || 'Unknown'}
                             </p>
-                            {getPlatformBadge(conv.userPlatformType)}
+                            {conv.userPlatformType && (
+                              <StatusBadge
+                                status={conv.userPlatformType}
+                                type="platform"
+                                size="sm"
+                              />
+                            )}
                           </div>
                           <div className="flex items-center gap-1 mt-0.5">
-                            {getStatusBadge(conv.userStatus)}
+                            {conv.userStatus && (
+                              <StatusBadge
+                                status={conv.userStatus}
+                                type="user"
+                                size="sm"
+                              />
+                            )}
                           </div>
                           {conv.lastMessage?.content && (
                             <p className="text-xs text-slate-500 truncate mt-1">
@@ -301,7 +279,7 @@ function ConversationsPageContent() {
                           )}
                           <div className="flex items-center gap-1 mt-1 text-[10px] text-slate-400">
                             <Clock className="h-3 w-3" />
-                            {formatRelativeTime(conv.lastMessageAt)}
+                            {sharedFormatRelativeTime(conv.lastMessageAt)}
                           </div>
                         </div>
                       </div>
@@ -329,7 +307,7 @@ function ConversationsPageContent() {
               </div>
             ) : detailLoading && !conversationDetail ? (
               <div className="flex-1 flex items-center justify-center">
-                <RefreshCw className="h-8 w-8 animate-spin text-slate-400" />
+                <LoadingSpinner size="lg" centered />
               </div>
             ) : (
               <>
@@ -403,7 +381,7 @@ function ConversationsPageContent() {
                                 msg.direction === 'outbound' ? 'text-slate-600' : 'text-slate-500'
                               }`}
                             >
-                              {formatTime(msg.sentAt)}
+                              {sharedFormatTime(msg.sentAt)}
                               {msg.direction === 'outbound' && (
                                 <span className="text-blue-500 font-bold">&#10003;&#10003;</span>
                               )}
@@ -441,10 +419,7 @@ export default function ConversationsPage() {
     <Suspense
       fallback={
         <div className="flex h-screen items-center justify-center bg-slate-100">
-          <div className="text-center">
-            <RefreshCw className="h-8 w-8 animate-spin mx-auto text-green-600" />
-            <p className="mt-2 text-slate-600">Memuat percakapan...</p>
-          </div>
+          <LoadingSpinner size="xl" text="Memuat percakapan..." variant="primary" />
         </div>
       }
     >

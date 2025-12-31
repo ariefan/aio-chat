@@ -2,6 +2,17 @@ import { db } from './index'
 import { operators, users, conversations, messages, messageTemplates, automationRules } from './schema'
 import { eq } from 'drizzle-orm'
 import bcrypt from 'bcryptjs'
+import crypto from 'crypto'
+
+/**
+ * Generate a secure random password
+ */
+function generateSecurePassword(length = 16): string {
+  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*'
+  return Array.from(crypto.randomBytes(length))
+    .map(byte => chars[byte % chars.length])
+    .join('')
+}
 
 async function seedDatabase() {
   console.log('🌱 Starting database seeding...')
@@ -15,10 +26,14 @@ async function seedDatabase() {
     await db.delete(automationRules)
     await db.delete(operators)
 
+    // Generate secure passwords (or use env vars if provided)
+    const adminPassword = process.env.SEED_ADMIN_PASSWORD || generateSecurePassword()
+    const operatorPassword = process.env.SEED_OPERATOR_PASSWORD || generateSecurePassword()
+
     // Create admin operator
-    const adminPasswordHash = await bcrypt.hash('admin123', 10)
+    const adminPasswordHash = await bcrypt.hash(adminPassword, 10)
     const [admin] = await db.insert(operators).values({
-      email: 'admin@aio-chat.com',
+      email: process.env.SEED_ADMIN_EMAIL || 'admin@aio-chat.com',
       name: 'Admin User',
       passwordHash: adminPasswordHash,
       role: 'admin',
@@ -26,14 +41,17 @@ async function seedDatabase() {
     }).returning()
 
     // Create operator user
-    const operatorPasswordHash = await bcrypt.hash('operator123', 10)
+    const operatorPasswordHash = await bcrypt.hash(operatorPassword, 10)
     const [operator] = await db.insert(operators).values({
-      email: 'operator@aio-chat.com',
+      email: process.env.SEED_OPERATOR_EMAIL || 'operator@aio-chat.com',
       name: 'Chat Operator',
       passwordHash: operatorPasswordHash,
       role: 'operator',
       isActive: true,
     }).returning()
+
+    // Store passwords for display (will be shown at the end)
+    const credentials = { adminPassword, operatorPassword }
 
     if (!admin || !operator) {
       throw new Error('Failed to create operators')
@@ -242,8 +260,12 @@ async function seedDatabase() {
     console.log(`   - Automation Rules: ${2}`)
 
     console.log('\n🔑 Login credentials:')
-    console.log(`   - Admin: admin@aio-chat.com / admin123`)
-    console.log(`   - Operator: operator@aio-chat.com / operator123`)
+    console.log(`   ⚠️  SAVE THESE PASSWORDS - THEY WILL NOT BE SHOWN AGAIN!`)
+    console.log(`   - Admin: ${admin.email} / ${credentials.adminPassword}`)
+    console.log(`   - Operator: ${operator.email} / ${credentials.operatorPassword}`)
+    console.log('')
+    console.log('   💡 Tip: Set SEED_ADMIN_PASSWORD and SEED_OPERATOR_PASSWORD env vars')
+    console.log('      to use your own passwords instead of random generation.')
 
   } catch (error) {
     console.error('❌ Error seeding database:', error)

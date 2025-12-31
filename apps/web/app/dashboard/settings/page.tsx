@@ -29,8 +29,8 @@ export default function SettingsPage() {
         setSettings(data.settings || {})
         // Initialize edited values
         const initialEdited: Record<string, string> = {}
-        for (const [key, setting] of Object.entries(data.settings || {})) {
-          initialEdited[key] = (setting as any).value
+        for (const [key, setting] of Object.entries(data.settings || {}) as [string, { value: string }][]) {
+          initialEdited[key] = setting.value
         }
         setEditedValues(initialEdited)
       }

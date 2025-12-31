@@ -4,11 +4,29 @@
  * Single provider architecture - switchable via AI_PROVIDER env:
  * - 'openrouter' (default): Uses OpenRouter API
  * - 'togetherai': Uses TogetherAI API
+ *
+ * Enhanced with:
+ * - Conversation memory management
+ * - User context persistence
+ * - Smart context windowing
  */
 
 import { db } from '@/db'
 import { bpjsMembers, bpjsDebts, users } from '@/db/schema'
 import { eq, and, desc } from 'drizzle-orm'
+import {
+  getConversationContext,
+  buildEnhancedContextString,
+  formatRecentMessages,
+  getOrCreateSession,
+  storeSessionMessage,
+  detectPreferencesFromMessage,
+  updateUserPreferences,
+  extractFactsFromMessage,
+  updatePersistentMemory,
+  getFullConversationHistory,
+  type ConversationContext,
+} from './memory-service'
 
 // =============================================================================
 // AI Provider Configuration
@@ -109,6 +127,7 @@ export interface JennyChatOptions {
   bpjsMemberId?: string
   temperature?: number
   maxTokens?: number
+  contextString?: string // Pre-built context from memory service
 }
 
 export interface BpjsMemberInfo {
@@ -298,6 +317,7 @@ export async function generateJennyResponse(
     conversationHistory = [],
     temperature = 0.7,
     maxTokens = 1024,
+    contextString = '',
   } = options
 
   try {
@@ -315,6 +335,11 @@ export async function generateJennyResponse(
       } else {
         contextMessage = `\n\n[KONTEKS SISTEM: Nomor BPJS ${extractedBpjsId} tidak ditemukan dalam sistem. Minta peserta untuk memastikan nomor BPJS sudah benar.]`
       }
+    }
+
+    // Add pre-built context from memory service if available
+    if (contextString) {
+      contextMessage = `\n\n${contextString}${contextMessage}`
     }
 
     // Build messages array
@@ -374,6 +399,7 @@ export async function generateJennyResponse(
 
 /**
  * Handle incoming message from Telegram/WhatsApp
+ * Enhanced with conversation memory and context management
  */
 export async function handleJennyMessage(
   message: string,
@@ -384,45 +410,102 @@ export async function handleJennyMessage(
   response: string
   memberInfo?: BpjsMemberInfo
   verified: boolean
+  sessionId?: string
 }> {
-  // Check if user is already verified
-  const [user] = await db
-    .select()
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1)
+  try {
+    // Get or create AI session for persistent memory
+    const session = await getOrCreateSession(userId, platformType, message.slice(0, 50))
 
-  const isVerified = user?.status === 'verified' || user?.status === 'active'
+    // Get full conversation context from memory service
+    const context = await getConversationContext(userId, platformType)
 
-  // If verified, check for linked BPJS member
-  let existingMemberInfo: BpjsMemberInfo | null = null
-  if (isVerified) {
-    const [member] = await db
-      .select()
-      .from(bpjsMembers)
-      .where(eq(bpjsMembers.userId, userId))
-      .limit(1)
-
-    if (member) {
-      existingMemberInfo = await verifyBpjsId(member.bpjsId)
+    // Detect and store user preferences
+    const detectedPrefs = detectPreferencesFromMessage(message)
+    if (Object.keys(detectedPrefs).length > 0) {
+      await updateUserPreferences(userId, detectedPrefs)
     }
-  }
 
-  // Generate response
-  const result = await generateJennyResponse(message, {
-    conversationHistory,
-    userId,
-    bpjsMemberId: existingMemberInfo?.id,
-  })
+    // Check if user is already verified
+    const isVerified = context.userProfile?.status === 'verified' || context.userProfile?.status === 'active'
 
-  // If new member verified, link to user
-  if (result.memberInfo && !isVerified) {
-    await linkBpjsToUser(result.memberInfo.id, userId)
-  }
+    // Get existing BPJS member info from context
+    let existingMemberInfo: BpjsMemberInfo | null = null
+    if (context.bpjsMemberInfo) {
+      // We already have context, use it to avoid duplicate DB queries
+      existingMemberInfo = await verifyBpjsId(context.bpjsMemberInfo.bpjsId)
+    }
 
-  return {
-    response: result.response,
-    memberInfo: result.memberInfo || existingMemberInfo || undefined,
-    verified: isVerified || !!result.memberInfo,
+    // Build enhanced conversation history from memory
+    const memoryBasedHistory = formatRecentMessages(context.recentMessages, 1500)
+
+    // If memory-based history is empty (new session), get full history from messages table
+    let fullHistory = memoryBasedHistory
+    if (memoryBasedHistory.length === 0) {
+      const crossSessionHistory = await getFullConversationHistory(userId, 15)
+      fullHistory = crossSessionHistory.map(m => ({
+        role: m.role,
+        content: m.content,
+      }))
+    }
+
+    // Merge with any provided history (give priority to memory-based)
+    const enhancedHistory: JennyChatMessage[] = [
+      ...fullHistory.map(m => ({ role: m.role, content: m.content })),
+      // Add any new messages from provided history that aren't in memory
+      ...conversationHistory.filter(h =>
+        !fullHistory.some(m => m.content === h.content)
+      ),
+    ]
+
+    // Build ENHANCED context string with persistent memory
+    const contextString = buildEnhancedContextString(context)
+
+    // Generate response with enhanced context
+    const result = await generateJennyResponse(message, {
+      conversationHistory: enhancedHistory,
+      userId,
+      bpjsMemberId: existingMemberInfo?.id,
+      contextString, // Pass the built context
+    })
+
+    // Store messages in session for future context
+    await storeSessionMessage(session.sessionId, 'user', message, {
+      timestamp: new Date().toISOString(),
+    })
+    await storeSessionMessage(session.sessionId, 'assistant', result.response, {
+      model: result.model,
+      tokensUsed: result.tokensUsed,
+      memberVerified: !!result.memberInfo,
+    })
+
+    // Extract and store important facts from the conversation (PERSISTENT MEMORY)
+    const extractedInfo = extractFactsFromMessage(message, result.response)
+    if (extractedInfo.facts.length > 0 || extractedInfo.sentiment || extractedInfo.debtReasons) {
+      await updatePersistentMemory(userId, {
+        facts: extractedInfo.facts,
+        lastSentiment: extractedInfo.sentiment,
+        debtReasons: extractedInfo.debtReasons,
+      })
+    }
+
+    // If new member verified, link to user
+    if (result.memberInfo && !isVerified) {
+      await linkBpjsToUser(result.memberInfo.id, userId)
+    }
+
+    return {
+      response: result.response,
+      memberInfo: result.memberInfo || existingMemberInfo || undefined,
+      verified: isVerified || !!result.memberInfo,
+      sessionId: session.sessionId,
+    }
+  } catch (error) {
+    console.error('Error in handleJennyMessage:', error)
+
+    // Graceful fallback
+    return {
+      response: 'Mohon maaf, sistem sedang mengalami gangguan. Silakan coba beberapa saat lagi atau hubungi kantor BPJS Kesehatan terdekat.',
+      verified: false,
+    }
   }
 }

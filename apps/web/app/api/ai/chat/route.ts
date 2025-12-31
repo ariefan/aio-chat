@@ -5,8 +5,21 @@ import { users } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import {
+  checkRateLimit,
+  getClientIdentifier,
+  RATE_LIMITS,
+  rateLimitExceededResponse,
+} from '@/lib/rate-limiter'
 
 export async function POST(request: NextRequest) {
+  // Rate limiting - AI operations are expensive
+  const clientId = getClientIdentifier(request)
+  const rateCheck = checkRateLimit(clientId, RATE_LIMITS.aiChat)
+  if (!rateCheck.allowed) {
+    return rateLimitExceededResponse(rateCheck.retryAfter!)
+  }
+
   try {
     const session = await getServerSession(authOptions)
     if (!session) {
