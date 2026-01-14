@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui'
 import { Button } from '@workspace/ui/src/components/button'
 import { DashboardLayout } from '@/components/dashboard/layout'
 import { Save, RefreshCw, Bot, MessageSquare, Sparkles } from 'lucide-react'
-import { Combobox, ComboboxOption } from '@workspace/ui/src/components/combobox'
+import { Combobox, ComboboxOption } from '@workspace/ui'
 
 // Top 10 LLM Models for POC Chatbot
 const AI_MODEL_OPTIONS: ComboboxOption[] = [
