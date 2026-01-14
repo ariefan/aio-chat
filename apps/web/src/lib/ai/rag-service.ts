@@ -6,6 +6,7 @@ import {
   aiMessages,
   ragSearchLogs,
   users,
+  appSettings,
   KnowledgeDocument,
   DocumentEmbedding
 } from '@/db'
@@ -18,6 +19,24 @@ import {
   type ChatMessage,
   type ChatCompletionOptions
 } from './openai-client'
+
+/**
+ * Get AI model setting from database
+ */
+async function getAIModel(): Promise<string> {
+  try {
+    const [modelSetting] = await db
+      .select()
+      .from(appSettings)
+      .where(eq(appSettings.key, 'ai.model'))
+      .limit(1)
+
+    return modelSetting?.value || 'gpt-4o-mini' // Default fallback
+  } catch (error) {
+    console.error('Failed to fetch AI model setting:', error)
+    return 'gpt-4o-mini' // Fallback to default
+  }
+}
 
 export interface RAGSearchOptions {
   maxResults?: number
@@ -261,6 +280,9 @@ export async function performRAGSearch(
   let sessionId: string | null = null
 
   try {
+    // Get AI model from database
+    const aiModel = await getAIModel()
+
     // Get or create AI chat session
     const sessionQuery = await db
       .select()
@@ -339,9 +361,10 @@ export async function performRAGSearch(
       `Document: ${doc.title}\nContent: ${doc.content}`
     )
 
-    // Generate AI response
+    // Generate AI response with model from database
     const completionResult = await generateChatCompletion(query, {
       ...options,
+      model: aiModel, // Use model from database
       conversationHistory,
       retrievedContext,
     })

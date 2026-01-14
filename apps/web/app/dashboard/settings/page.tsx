@@ -4,7 +4,67 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui'
 import { Button } from '@workspace/ui/src/components/button'
 import { DashboardLayout } from '@/components/dashboard/layout'
-import { Save, RefreshCw, Bot, MessageSquare } from 'lucide-react'
+import { Save, RefreshCw, Bot, MessageSquare, Sparkles } from 'lucide-react'
+import { Combobox, ComboboxOption } from '@workspace/ui/src/components/combobox'
+
+// Top 10 LLM Models for POC Chatbot
+const AI_MODEL_OPTIONS: ComboboxOption[] = [
+  // Tier 1: Budget-Friendly Speed Demons
+  {
+    value: 'gpt-4o-mini',
+    label: 'GPT-4o Mini',
+    sublabel: 'OpenAI - Best balance of speed & cost ($0.15/$0.60 per 1M)'
+  },
+  {
+    value: 'gemini-2.0-flash-exp',
+    label: 'Gemini 2.0 Flash Experimental',
+    sublabel: 'Google - FREE tier, blazing fast'
+  },
+  {
+    value: 'claude-3-5-haiku-20241022',
+    label: 'Claude 3.5 Haiku',
+    sublabel: 'Anthropic - Fast & affordable (~$0.25/$1.25 per 1M)'
+  },
+  {
+    value: 'deepseek-chat',
+    label: 'DeepSeek Chat',
+    sublabel: 'DeepSeek - Cheapest option (~$0.14/$0.28 per 1M)'
+  },
+
+  // Tier 2: Smart Mid-Range
+  {
+    value: 'gpt-4o',
+    label: 'GPT-4o',
+    sublabel: 'OpenAI - Excellent balance ($2.50/$10 per 1M)'
+  },
+  {
+    value: 'claude-3-5-sonnet-20241022',
+    label: 'Claude 3.5 Sonnet',
+    sublabel: 'Anthropic - Great reasoning ($3/$15 per 1M)'
+  },
+  {
+    value: 'gemini-2.5-pro-preview-03-25',
+    label: 'Gemini 2.5 Pro',
+    sublabel: 'Google - Strong reasoning capabilities'
+  },
+
+  // Tier 3: Heavy Artillery
+  {
+    value: 'claude-3-opus-20240229',
+    label: 'Claude 3 Opus',
+    sublabel: 'Anthropic - Maximum intelligence ($15/$75 per 1M)'
+  },
+  {
+    value: 'o1-preview',
+    label: 'GPT-1 Preview',
+    sublabel: 'OpenAI - Deep reasoning for complex tasks ($15/$60 per 1M)'
+  },
+  {
+    value: 'gemini-2.5-flash',
+    label: 'Gemini 2.5 Flash',
+    sublabel: 'Google - Balanced performance'
+  },
+]
 
 interface SettingsData {
   [key: string]: {
@@ -19,11 +79,12 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState<string | null>(null)
   const [editedValues, setEditedValues] = useState<Record<string, string>>({})
+  const [selectedModel, setSelectedModel] = useState<string>('gpt-4o-mini')
 
   const fetchSettings = async () => {
     setLoading(true)
     try {
-      const res = await fetch('/api/settings?category=ai')
+      const res = await fetch('/api/settings')
       if (res.ok) {
         const data = await res.json()
         setSettings(data.settings || {})
@@ -31,6 +92,10 @@ export default function SettingsPage() {
         const initialEdited: Record<string, string> = {}
         for (const [key, setting] of Object.entries(data.settings || {}) as [string, { value: string }][]) {
           initialEdited[key] = setting.value
+          // Set selected model from database
+          if (key === 'ai.model') {
+            setSelectedModel(setting.value)
+          }
         }
         setEditedValues(initialEdited)
       }
@@ -79,6 +144,35 @@ export default function SettingsPage() {
 
   const hasChanges = (key: string) => {
     return settings[key]?.value !== editedValues[key]
+  }
+
+  const handleModelChange = async (model: string) => {
+    setSelectedModel(model)
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          key: 'ai.model',
+          value: model,
+          description: 'Selected AI model for chatbot',
+          category: 'ai',
+        }),
+      })
+
+      if (res.ok) {
+        setSettings(prev => ({
+          ...prev,
+          'ai.model': {
+            value: model,
+            description: 'Selected AI model for chatbot',
+            category: 'ai',
+          },
+        }))
+      }
+    } catch (error) {
+      console.error('Failed to save model:', error)
+    }
   }
 
   const promptSettings = [
@@ -162,23 +256,39 @@ export default function SettingsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Informasi AI Provider</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5" />
+              Informasi AI Provider
+            </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-4 text-sm">
+          <CardContent className="space-y-6">
+            <div className="space-y-4">
               <div>
-                <p className="text-gray-500">Provider</p>
-                <p className="font-medium">{process.env.NEXT_PUBLIC_AI_PROVIDER || 'OpenRouter'}</p>
+                <p className="text-sm font-medium text-gray-700 mb-2">Provider</p>
+                <p className="text-sm text-gray-600">{process.env.NEXT_PUBLIC_AI_PROVIDER || 'OpenAI'}</p>
               </div>
+
               <div>
-                <p className="text-gray-500">Model</p>
-                <p className="font-medium">{process.env.NEXT_PUBLIC_AI_MODEL || 'Default'}</p>
+                <p className="text-sm font-medium text-gray-700 mb-2">Model AI</p>
+                <Combobox
+                  options={AI_MODEL_OPTIONS}
+                  value={selectedModel}
+                  onValueChange={handleModelChange}
+                  placeholder="Pilih model AI..."
+                  searchPlaceholder="Cari model..."
+                  className="w-full"
+                />
+                <p className="mt-2 text-xs text-gray-500">
+                  💡 Pilih model untuk chatbot. <strong>GPT-4o Mini</strong> direkomendasikan untuk POC.
+                </p>
               </div>
             </div>
-            <p className="mt-4 text-xs text-gray-500">
-              AI provider dan model dikonfigurasi melalui environment variables.
-              Hubungi administrator untuk mengubah konfigurasi ini.
-            </p>
+
+            <div className="rounded-md bg-blue-50 p-3 border border-blue-200">
+              <p className="text-xs text-blue-800">
+                <strong>Info:</strong> Konfigurasi ini akan disimpan ke database dan menggantikan environment variable untuk model selection.
+              </p>
+            </div>
           </CardContent>
         </Card>
       </div>
