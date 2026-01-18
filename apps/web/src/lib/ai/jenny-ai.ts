@@ -12,8 +12,9 @@
  */
 
 import { db } from '@/db'
-import { bpjsMembers, bpjsDebts, users } from '@/db/schema'
-import { eq, and, desc } from 'drizzle-orm'
+import { bpjsMembers, bpjsDebts, users, customerStrategies, pandawaKnowledgeBase } from '@/db/schema'
+import { eq, and, desc, or } from 'drizzle-orm'
+import { getMemberSegmentation, type SegmentationResult } from '../services/behavioral-segmentation'
 import {
   getConversationContext,
   buildEnhancedContextString,
@@ -113,6 +114,252 @@ Minta mereka menyebutkan nomor BPJS (13 digit) untuk verifikasi.
 Ingat: Kamu adalah representasi BPJS Kesehatan, jaga profesionalisme dan keramahan.`
 
 // =============================================================================
+// PANDAWA System Prompts (Enhanced Behavioral-Based)
+// =============================================================================
+
+/**
+ * Get persona-specific instructions for communication style
+ */
+function getPersonaSpecificInstructions(personaCode: string): string {
+  const instructions: Record<string, string> = {
+    'NEW_MEMBER': `
+**APPROACH FOR NEW MEMBER (Peserta Baru):**
+- Fokus pada EDUKASI dan PANDUAN
+- Jelaskan cara pembayaran dengan sangat jelas
+- Tawarkan bantuan setting autodebet
+- Ramah, sabar, dan informatif
+- Prioritas: Membuat mereka nyaman dan paham sistem
+`,
+
+    'RELIABLE_PAYER': `
+**APPROACH FOR RELIABLE PAYER (Penyetia Tepat Waktu):**
+- Berikan APRESIASI atas ketepatan pembayaran
+- Gunakan bahakan yang sopan dan hangat
+- Low pressure, gentle reminders only
+- Fokus pada retensi dan loyalitas
+- Tone: Appreciative, warm, professional
+- Prioritas: Mempertahankan loyalitas dan kepuasan
+`,
+
+    'FORGETFUL_PAYER': `
+**APPROACH FOR FORGETFUL PAYER (Pelupa Rutinitas):**
+- Fokus pada REMINDER dan KEMUDAHAN
+- Tawarkan solusi praktis: autodebet, pengingat WhatsApp
+- Jangan menghakimi, gunakan tone understanding
+- Berikan tips agar tidak lupa bayar
+- Tone: Friendly, helpful, non-judgmental
+- Prioritas: Membantu mereka ingat dan memudahkan pembayaran
+`,
+
+    'FINANCIAL_STRUGGLE': `
+**APPROACH FOR FINANCIAL STRUGGLE (Kesulitan Finansial):**
+- Tampilkan EMPATI dan SOLUSI
+- Jangan menekan atau mengancam
+- Tawarkan program rehabilitasi tunggakan
+- Jelaskan opsi cicilan terjangkau
+- Fokus pada solusi, bukan masalah
+- Tone: Empathetic, supportive, solution-oriented
+- Prioritas: Membantu mereka menemukan solusi yang realistis
+`,
+
+    'HARD_COMPLAINER': `
+**APPROACH FOR HARD COMPLAINER (Pemberat Sulit Atur):**
+- Tetap PROFESSIONAL dan TEGAS
+- Fokus pada fakta dan konsekuensi
+- Dokumentasikan semua interaksi
+- Jangan terpancing emosi
+- Berikan bukti tagihan yang jelas
+- Tone: Firm, professional, factual
+- Prioritas: Menegakkan kewajiban dengan tetap sopan
+`,
+
+    'UNKNOWN': `
+**APPROACH FOR UNKNOWN (Perlu Analisis Lebih Lanjut):**
+- Gunakan pendekatan STANDAR
+- Kumpulkan informasi lebih banyak
+- Evaluasi respons dan preferensi
+- Tone: Neutral, professional
+- Prioritas: Memahami situasi peserta
+`
+  }
+
+  return instructions[personaCode] || instructions['UNKNOWN'] || ''
+}
+
+/**
+ * Fetch relevant KB entries based on persona
+ */
+async function getRelevantKBEntries(personaCode: string, query?: string): Promise<any[]> {
+  try {
+    // Build where clause for applicable personas
+    const applicablePersonasClause = query
+      ? or(
+          eq(pandawaKnowledgeBase.applicablePersonas, JSON.stringify([personaCode])),
+          eq(pandawaKnowledgeBase.applicablePersonas, JSON.stringify(['ALL']))
+        )
+      : or(
+          eq(pandawaKnowledgeBase.applicablePersonas, JSON.stringify([personaCode])),
+          eq(pandawaKnowledgeBase.applicablePersonas, JSON.stringify(['ALL'])),
+          eq(pandawaKnowledgeBase.applicablePersonas, JSON.stringify(['NEW_MEMBER', 'RELIABLE_PAYER', 'FORGETFUL_PAYER', 'FINANCIAL_STRUGGLE']))
+        )
+
+    const entries = await db
+      .select()
+      .from(pandawaKnowledgeBase)
+      .where(
+        and(
+          applicablePersonasClause!,
+          eq(pandawaKnowledgeBase.isActive, true)
+        )
+      )
+      .orderBy(desc(pandawaKnowledgeBase.priority))
+      .limit(10)
+
+    return entries
+  } catch (error) {
+    console.error('Error fetching KB entries:', error)
+    return []
+  }
+}
+
+/**
+ * Build PANDAWA-style system prompt with behavioral segmentation
+ */
+export async function buildPandawaSystemPrompt(
+  memberId: string,
+  memberInfo: BpjsMemberInfo
+): Promise<string> {
+  try {
+    // Get behavioral segmentation
+    const segmentation = await getMemberSegmentation(memberId)
+
+    if (!segmentation) {
+      // Fallback to legacy prompt if segmentation fails
+      console.warn('Segmentation not available, using legacy prompt')
+      return JENNY_SYSTEM_PROMPT
+    }
+
+    // Get customer strategy
+    const [strategy] = await db
+      .select()
+      .from(customerStrategies)
+      .where(
+        and(
+          eq(customerStrategies.memberId, memberId),
+          eq(customerStrategies.isActive, true)
+        )
+      )
+      .orderBy(desc(customerStrategies.createdAt))
+      .limit(1)
+
+    // Get relevant KB entries based on persona
+    const kbEntries = await getRelevantKBEntries(segmentation.personaCode)
+
+    // Build KB summary
+    const kbSummary = kbEntries.map(entry => {
+      const faqs = entry.faqs ? (entry.faqs as any[]).slice(0, 2).map((f: any) => `Q: ${f.question}\nA: ${f.answer}`).join('\n') : ''
+      return `**${entry.kbId} - ${entry.title}**\n${entry.summary}\n${faqs}\n`
+    }).join('\n')
+
+    // Build persona-specific instructions
+    const personaInstructions = getPersonaSpecificInstructions(segmentation.personaCode)
+
+    // Construct PANDAWA prompt
+    const pandawaPrompt = `
+Anda adalah PANDAWA (Pelayanan Administrasi Melalui Whatsapp), asisten virtual cerdas dari BPJS Kesehatan.
+
+${personaInstructions}
+
+========== PROFIL PESERTA ==========
+Nama: ${memberInfo.name}
+No. BPJS: ${memberInfo.bpjsId}
+Kelas Rawat: ${memberInfo.memberClass}
+Status: ${memberInfo.status === 'active' ? 'AKTIF' : 'TIDAK AKTIF'}
+
+========== DATA TAGIHAN ==========
+Total Tunggakan: Rp ${memberInfo.totalDebt.toLocaleString('id-ID')}
+Jumlah Bulan Menunggak: ${memberInfo.debts.length} bulan
+${memberInfo.debts.length > 0 ? `Detail: ${memberInfo.debts.map(d => `${d.periodMonth}/${d.periodYear} - Rp ${d.amount.toLocaleString('id-ID')}`).join(', ')}` : 'Tidak ada tunggakan'}
+
+========== SEGMENTASI PERILAKU ==========
+Persona: ${segmentation.personaName} (${segmentation.personaCode})
+Tingkat Risiko: ${segmentation.riskLevel}
+Probabilitas Pembayaran: ${(segmentation.paymentProbability * 100).toFixed(0)}%
+Poin Nyeri: ${(segmentation.painPoints as string[]).join(', ') || '-'}
+Motivator: ${(segmentation.motivators as string[]).join(', ') || '-'}
+
+========== STRATEGI KOMUNIKASI ==========
+${strategy ? `
+Pendekatan: ${strategy.approach}
+Tone: ${strategy.tone}
+Urgensi: ${strategy.urgency}
+Catatan Personalisasi: ${strategy.personalizationNotes || '-'}
+Aksi yang Direkomendasikan:
+${(strategy.recommendedActions as string[]).map((action, i) => `${i + 1}. ${action}`).join('\n')}
+` : 'Menggunakan strategi default'}
+
+========== BASIS PENGETAHUAN (KB) ==========
+${kbSummary || 'Menggunakan pengetahuan umum BPJS Kesehatan'}
+
+========== INSTRUKSI KHUSUS ==========
+${segmentation.recommendedStrategy === 'rehabilitation_offer' ? '✋ TAWARKAN PROGRAM REHABILITASI TUNGGAKAN dengan cara dicicil hingga 24 bulan, bebas denda!' : ''}
+${segmentation.recommendedStrategy === 'gentle_reminder' ? '💚 Berikan pengingat yang RAMAH dan HANGAT. Jangan menekan.' : ''}
+${segmentation.recommendedStrategy === 'firm_demand' ? '⚠️ Pendekatan TEGAS dan FAKTUAL. Fokus pada konsekuensi dan kewajiban.' : ''}
+${segmentation.recommendedStrategy === 'onboarding_education' ? '🎓 Fokus pada EDUKASI lengkap untuk peserta baru. Jelaskan semuanya dengan detail.' : ''}
+
+========== GAYA BICARA ==========
+- Gunakan Bahasa Indonesia yang sopan, ramah, dan solutif
+- Panggil peserta dengan "Bapak/Ibu"
+- Sesuaikan gaya bicara dengan persona peserta (lihat instruksi khusus di atas)
+- Berikan informasi yang jelas dan akurat
+- Jangan memberikan format JSON atau tag khusus
+- Berikan jawaban dalam bentuk teks Markdown yang rapi
+
+${segmentation.personaCode === 'FINANCIAL_STRUGGLE' ? `
+💡 PESERTA INI SEDANG KESULITAN FINANSIAL:
+- Tampilkan EMPATI yang tulus
+- Jangan menekan atau mengancam
+- Tawarkan SOLUSI nyata: Program Rehabilitasi Tunggakan
+- Informasikan bahwa cicilan bisa hingga 24 bulan, bebas denda
+- Fokus pada BANTUAN, bukan penagihan
+` : ''}
+
+${segmentation.personaCode === 'RELIABLE_PAYER' ? `
+⭐ PESERTA INI ADALAH PENYETIA TEPAT WAKTU:
+- Berikan APRESIASI atas kepatuhan mereka
+- Perlakukan seperti VIP
+- Low pressure, hanya pengingat ramah
+- Mereka adalah aset berharga BPJS
+` : ''}
+
+${segmentation.personaCode === 'FORGETFUL_PAYER' ? `
+⏰ PESERTA INI CENDERUNG LUPA BAYAR:
+- Tawarkan solusi PRAKTIS: autodebit, reminder WhatsApp
+- Jangan menghakimi, mereka bukan orang jahat
+- Fokus pada KEMUDAHAN dan PENGINGAT
+- Bantu mereka agar tidak lupa lagi
+` : ''}
+
+${segmentation.riskLevel === 'high' || segmentation.riskLevel === 'critical' ? `
+⚠️ PERHATIAN: Risiko tinggi, perlu pendekatan khusus
+- Perhatikan instruksi persona di atas dengan seksama
+- Jika peserta marah, tetap profesional dan tenang
+- Fokus pada solusi, bukan masalah
+` : ''}
+
+Ingat: Kamu adalah representasi BPJS Kesehatan. Gunakan pendekatan yang TEPAT untuk persona ini.
+`
+
+    return pandawaPrompt
+
+  } catch (error) {
+    console.error('Error building PANDAWA prompt:', error)
+    // Fallback to legacy prompt
+    return JENNY_SYSTEM_PROMPT
+  }
+}
+
+// =============================================================================
 // Types
 // =============================================================================
 
@@ -128,6 +375,7 @@ export interface JennyChatOptions {
   temperature?: number
   maxTokens?: number
   contextString?: string // Pre-built context from memory service
+  systemPromptOverride?: string // PANDAWA prompt override
 }
 
 export interface BpjsMemberInfo {
@@ -318,10 +566,14 @@ export async function generateJennyResponse(
     temperature = 0.7,
     maxTokens = 1024,
     contextString = '',
+    systemPromptOverride,
   } = options
 
   try {
     const config = getAIConfig()
+
+    // Use PANDAWA prompt if provided, otherwise use legacy prompt
+    const baseSystemPrompt = systemPromptOverride || JENNY_SYSTEM_PROMPT
 
     // Check if user is mentioning BPJS ID for verification
     const extractedBpjsId = extractBpjsId(userMessage)
@@ -344,7 +596,7 @@ export async function generateJennyResponse(
 
     // Build messages array
     const messages: Array<{ role: string; content: string }> = [
-      { role: 'system', content: JENNY_SYSTEM_PROMPT + contextMessage },
+      { role: 'system', content: baseSystemPrompt + contextMessage },
     ]
 
     // Add conversation history
@@ -460,12 +712,26 @@ export async function handleJennyMessage(
     // Build ENHANCED context string with persistent memory
     const contextString = buildEnhancedContextString(context)
 
+    // Build PANDAWA prompt for verified members (behavioral segmentation + KB injection)
+    let pandawaPrompt: string | undefined
+    if (existingMemberInfo && isVerified) {
+      try {
+        console.log(`🎭 Building PANDAWA prompt for verified member: ${existingMemberInfo.id}`)
+        pandawaPrompt = await buildPandawaSystemPrompt(existingMemberInfo.id, existingMemberInfo)
+        console.log(`✅ PANDAWA prompt ready for ${existingMemberInfo.name}`)
+      } catch (error) {
+        console.error('Error building PANDAWA prompt, using legacy:', error)
+        // Fall back to legacy prompt
+      }
+    }
+
     // Generate response with enhanced context
     const result = await generateJennyResponse(message, {
       conversationHistory: enhancedHistory,
       userId,
       bpjsMemberId: existingMemberInfo?.id,
       contextString, // Pass the built context
+      systemPromptOverride: pandawaPrompt, // Use PANDAWA prompt if available
     })
 
     // Store messages in session for future context

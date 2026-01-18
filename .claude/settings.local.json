@@ -17,7 +17,21 @@
       "Bash(ssh:*)",
       "WebFetch(domain:18.140.254.61)",
       "Bash(curl:*)",
-      "Bash(DATABASE_URL=\"postgresql://dokploy:amukds4wi9001583845717ad2@18.140.254.61:5555/aio-chat\" pnpm db:push:*)"
+      "Bash(DATABASE_URL=\"postgresql://dokploy:amukds4wi9001583845717ad2@18.140.254.61:5555/aio-chat\" pnpm db:push:*)",
+      "Bash(openssl rand:*)",
+      "Bash(node:*)",
+      "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_TDWkVJGyEp94@ep-autumn-wildflower-a1rqhzux-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require\" pnpm --filter web db:push:*)",
+      "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_TDWkVJGyEp94@ep-autumn-wildflower-a1rqhzux-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require\" pnpm db:push:*)",
+      "Bash(pnpm exec drizzle-kit:*)",
+      "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_TDWkVJGyEp94@ep-autumn-wildflower-a1rqhzux-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require\" pnpm exec drizzle-kit push:*)",
+      "Bash(nslookup:*)",
+      "Bash(dig:*)",
+      "Bash(for dns in 8.8.8.8 1.1.1.1 208.67.222.222)",
+      "Bash(do echo \"=== DNS: $dns ===\")",
+      "Bash(done)",
+      "Bash(pnpm exec tsc:*)",
+      "Bash(python3:*)",
+      "Bash(pnpm build:*)"
     ],
     "deny": [],
     "ask": []

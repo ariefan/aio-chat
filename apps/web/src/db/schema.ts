@@ -28,6 +28,16 @@ export const operatorRoleEnum = pgEnum('operator_role', ['admin', 'operator'])
 export const bpjsDebtStatusEnum = pgEnum('bpjs_debt_status', ['active', 'partial', 'paid', 'overdue', 'written_off'])
 export const bpjsMemberStatusEnum = pgEnum('bpjs_member_status', ['active', 'inactive', 'suspended'])
 
+// PANDAWA Behavioral Enums
+export const personaCodeEnum = pgEnum('persona_code', [
+  'FORGETFUL_PAYER',
+  'RELIABLE_PAYER',
+  'FINANCIAL_STRUGGLE',
+  'HARD_COMPLAINER',
+  'NEW_MEMBER',
+  'UNKNOWN'
+])
+
 // RAG Knowledge Base Enums
 export const documentTypeEnum = pgEnum('document_type', ['faq', 'policy', 'manual', 'procedure', 'general'])
 export const documentStatusEnum = pgEnum('document_status', ['draft', 'published', 'archived'])
@@ -427,6 +437,107 @@ export const appSettings = createTable('app_settings', {
   updatedBy: uuid('updated_by'),
 })
 
+// =============================================================================
+// PANDAWA-STYLE BEHAVIORAL ANALYTICS TABLES
+// =============================================================================
+
+// Behavioral Personas - Persona definitions for customer segmentation
+export const behavioralPersonas = createTable('behavioral_personas', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  code: personaCodeEnum('code').notNull().unique(),
+  name: varchar('name', { length: 100 }).notNull(),
+  description: text('description'),
+  characteristics: jsonb('characteristics'), // {paymentBehavior, communication, etc}
+  recommendedStrategy: jsonb('recommended_strategy'), // {approach, tone, urgency}
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+})
+
+// Behavioral Segmentations - Member classification results
+export const behavioralSegmentations = createTable('behavioral_segmentations', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  memberId: uuid('member_id').references(() => bpjsMembers.id, { onDelete: 'cascade' }).notNull(),
+  personaCode: personaCodeEnum('persona_code').notNull(),
+  confidenceScore: real('confidence_score').default(0.0), // 0.0 - 1.0 (ML confidence)
+  paymentProbability: real('payment_probability').default(0.5), // 0.0 - 1.0
+  painPoints: jsonb('pain_points'), // ["lupa_bayar", "sulit_finansial", "autodebet_gagal"]
+  motivators: jsonb('motivators'), // ["klaim_terakhir", "ancaman_nonaktif", "diskon"]
+  riskLevel: varchar('risk_level', { length: 20 }), // low, medium, high, critical
+  classificationMethod: varchar('classification_method', { length: 50 }), // rule_based, ml_model, manual
+  classifiedAt: timestamp('classified_at').defaultNow().notNull(),
+  validUntil: timestamp('valid_until'), // Reclassify after this date
+  metadata: jsonb('metadata'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+})
+
+// PANDAWA Knowledge Base - Structured KB with KB IDs
+export const pandawaKnowledgeBase = createTable('pandawa_knowledge_base', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  kbId: varchar('kb_id', { length: 20 }).notNull().unique(), // PAY_001, AUTO_001, REHAB_001, etc
+  category: varchar('category', { length: 100 }).notNull(), // Pembayaran, Autodebet, Kepesertaan, Klaim, Teknis Aplikasi, Kebijakan, Program Khusus
+  subcategory: varchar('subcategory', { length: 100 }),
+  title: varchar('title', { length: 500 }).notNull(),
+  summary: text('summary').notNull(),
+  detailContent: text('detail_content'),
+  faqs: jsonb('faqs'), // [{question: "...", answer: "..."}]
+  keywords: varchar('keywords', { length: 1000 }), // Comma-separated search terms
+  priority: integer('priority').default(0), // Higher = more important
+  applicablePersonas: jsonb('applicable_personas'), // ["FORGETFUL_PAYER", "FINANCIAL_STRUGGLE"]
+  lastVerified: timestamp('last_verified'),
+  verifiedBy: uuid('verified_by').references(() => operators.id),
+  version: integer('version').default(1),
+  isActive: boolean('is_active').default(true),
+  publishedAt: timestamp('published_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+})
+
+// Customer Strategies - Per-member strategy recommendations
+export const customerStrategies = createTable('customer_strategies', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  memberId: uuid('member_id').references(() => bpjsMembers.id, { onDelete: 'cascade' }).notNull(),
+  approach: varchar('approach', { length: 100 }).notNull(), // gentle_reminder, claim_data_trigger, rehabilitation_offer, firm_demand
+  tone: varchar('tone', { length: 50 }).notNull(), // empathetic, firm, urgent, neutral
+  urgency: varchar('urgency', { length: 20 }).notNull(), // low, medium, high, critical
+  recommendedActions: jsonb('recommended_actions'), // Array of action objects
+  personalizationNotes: text('personalization_notes'),
+  effectivePeriodStart: timestamp('effective_period_start').defaultNow().notNull(),
+  effectivePeriodEnd: timestamp('effective_period_end'),
+  strategySource: varchar('strategy_source', { length: 50 }), // persona_based, ml_model, manual_override
+  priority: integer('priority').default(5),
+  isActive: boolean('is_active').default(true),
+  generatedBy: uuid('generated_by').references(() => operators.id),
+  generatedAt: timestamp('generated_at').defaultNow().notNull(),
+  lastAppliedAt: timestamp('last_applied_at'),
+  performanceMetrics: jsonb('performance_metrics'), // {conversionRate, avgResponseTime}
+  metadata: jsonb('metadata'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+})
+
+// Interaction Analytics - Track interactions for ML training
+export const interactionAnalytics = createTable('interaction_analytics', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  memberId: uuid('member_id').references(() => bpjsMembers.id, { onDelete: 'cascade' }).notNull(),
+  sessionId: varchar('session_id', { length: 255 }),
+  platformType: platformTypeEnum('platform_type').notNull(),
+  interactionType: varchar('interaction_type', { length: 50 }).notNull(), // reminder, qa, negotiation, complaint
+  sentiment: varchar('sentiment', { length: 20 }), // positive, neutral, negative, hostile
+  sentimentScore: real('sentiment_score'), // -1.0 to 1.0
+  outcome: varchar('outcome', { length: 50 }), // promise_to_pay, payment_made, refused, no_response
+  topicsDiscussed: jsonb('topics_discussed'), // ["pembayaran", "autodebet", "keluhan"]
+  paymentPromiseAmount: integer('payment_promise_amount'),
+  paymentPromiseDate: timestamp('payment_promise_date'),
+  agentResponseTime: integer('agent_response_time'), // Milliseconds
+  customerResponseTime: integer('customer_response_time'), // Milliseconds
+  messageCount: integer('message_count').default(0),
+  strategyUsed: varchar('strategy_used', { length: 100 }),
+  personaAtTime: varchar('persona_at_time', { length: 50 }),
+  metadata: jsonb('metadata'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+})
+
 // Export types for use in the application
 export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert
@@ -470,6 +581,18 @@ export type BpjsPayment = typeof bpjsPayments.$inferSelect
 export type NewBpjsPayment = typeof bpjsPayments.$inferInsert
 export type ProactiveMessage = typeof proactiveMessages.$inferSelect
 export type NewProactiveMessage = typeof proactiveMessages.$inferInsert
+
+// PANDAWA Behavioral Analytics Types
+export type BehavioralPersona = typeof behavioralPersonas.$inferSelect
+export type NewBehavioralPersona = typeof behavioralPersonas.$inferInsert
+export type BehavioralSegmentation = typeof behavioralSegmentations.$inferSelect
+export type NewBehavioralSegmentation = typeof behavioralSegmentations.$inferInsert
+export type PandawaKnowledgeBase = typeof pandawaKnowledgeBase.$inferSelect
+export type NewPandawaKnowledgeBase = typeof pandawaKnowledgeBase.$inferInsert
+export type CustomerStrategy = typeof customerStrategies.$inferSelect
+export type NewCustomerStrategy = typeof customerStrategies.$inferInsert
+export type InteractionAnalytic = typeof interactionAnalytics.$inferSelect
+export type NewInteractionAnalytic = typeof interactionAnalytics.$inferInsert
 
 // Settings Types
 export type AppSetting = typeof appSettings.$inferSelect
