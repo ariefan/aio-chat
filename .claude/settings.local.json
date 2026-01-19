@@ -31,7 +31,10 @@
       "Bash(done)",
       "Bash(pnpm exec tsc:*)",
       "Bash(python3:*)",
-      "Bash(pnpm build:*)"
+      "Bash(pnpm build:*)",
+      "Bash(for:*)",
+      "Bash(do echo:*)",
+      "Bash(npm install:*)"
     ],
     "deny": [],
     "ask": []
