@@ -214,6 +214,7 @@ export default function MembersPage() {
                     <th className="text-left p-4 font-medium text-gray-600">No. BPJS</th>
                     <th className="text-left p-4 font-medium text-gray-600">Nama</th>
                     <th className="text-left p-4 font-medium text-gray-600">Telepon</th>
+                    <th className="text-left p-4 font-medium text-gray-600">Email</th>
                     <th className="text-left p-4 font-medium text-gray-600">Kelas</th>
                     <th className="text-left p-4 font-medium text-gray-600">Status</th>
                     <th className="text-left p-4 font-medium text-gray-600">Tunggakan</th>
@@ -232,6 +233,7 @@ export default function MembersPage() {
                       <td className="p-4 font-mono text-sm">{member.bpjsId}</td>
                       <td className="p-4">{member.name}</td>
                       <td className="p-4">{member.phone || '-'}</td>
+                      <td className="p-4 text-sm">{member.email || '-'}</td>
                       <td className="p-4">Kelas {member.memberClass}</td>
                       <td className="p-4">
                         <StatusBadge status={member.status} type="member" />

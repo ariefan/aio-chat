@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui'
 import { Button } from '@workspace/ui/src/components/button'
 import { DashboardLayout } from '@/components/dashboard/layout'
-import { Save, RefreshCw, Bot, MessageSquare, Sparkles } from 'lucide-react'
+import { Save, RefreshCw, Bot, MessageSquare, Sparkles, Database, AlertTriangle } from 'lucide-react'
 import { Combobox, ComboboxOption } from '@workspace/ui'
 
 // Top 10 LLM Models for POC Chatbot
@@ -80,6 +80,10 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState<string | null>(null)
   const [editedValues, setEditedValues] = useState<Record<string, string>>({})
   const [selectedModel, setSelectedModel] = useState<string>('gpt-4o-mini')
+
+  // Seed states
+  const [seeding, setSeeding] = useState<string | null>(null)
+  const [seedResult, setSeedResult] = useState<{ success: boolean; message: string; data?: any } | null>(null)
 
   const fetchSettings = async () => {
     setLoading(true)
@@ -173,6 +177,33 @@ export default function SettingsPage() {
     } catch (error) {
       console.error('Failed to save model:', error)
     }
+  }
+
+  const handleSeed = async (type: 'bpjs' | 'admin') => {
+    setSeeding(type)
+    setSeedResult(null)
+
+    try {
+      const endpoint = type === 'bpjs' ? '/api/bpjs/seed' : '/api/admin/seed'
+      const res = await fetch(endpoint, { method: 'POST' })
+
+      const result = await res.json()
+      setSeedResult(result)
+
+      if (res.ok) {
+        console.log(`✅ ${type} seeding successful:`, result)
+      } else {
+        console.error(`❌ ${type} seeding failed:`, result)
+      }
+    } catch (error) {
+      console.error(`Failed to seed ${type}:`, error)
+      setSeedResult({
+        success: false,
+        message: `Failed to seed ${type}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      })
+    }
+
+    setSeeding(null)
   }
 
   const promptSettings = [
@@ -289,6 +320,126 @@ export default function SettingsPage() {
                 <strong>Info:</strong> Konfigurasi ini akan disimpan ke database dan menggantikan environment variable untuk model selection.
               </p>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Database className="h-5 w-5" />
+              Seed Data (Testing)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="rounded-md bg-amber-50 p-4 border border-amber-200">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-amber-800">Perhatian!</p>
+                  <p className="text-xs text-amber-700 mt-1">
+                    Fitur ini akan menambahkan data testing ke database. Gunakan hanya untuk development/testing.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              {/* BPJS Seed */}
+              <div className="p-4 border rounded-lg space-y-3">
+                <div>
+                  <h4 className="font-medium text-sm">Seed BPJS Test Data</h4>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Membuat 10 member BPJS dummy dengan tunggakan untuk testing scheduler
+                  </p>
+                </div>
+                <div className="text-xs space-y-1 text-gray-600 bg-gray-50 p-3 rounded">
+                  <p>• <strong>3 members</strong>: Jatuh tempo dalam 7 hari (reminder_7d)</p>
+                  <p>• <strong>3 members</strong>: Jatuh tempo dalam 3 hari (reminder_3d)</p>
+                  <p>• <strong>2 members</strong>: Jatuh tempo dalam 1 hari (reminder_1d)</p>
+                  <p>• <strong>2 members</strong>: Sudah overdue (overdue reminder)</p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleSeed('bpjs')}
+                  disabled={seeding === 'bpjs'}
+                  className="w-full"
+                >
+                  {seeding === 'bpjs' ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      Seeding...
+                    </>
+                  ) : (
+                    <>
+                      <Database className="h-4 w-4 mr-2" />
+                      Seed BPJS Data
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {/* Admin Seed */}
+              <div className="p-4 border rounded-lg space-y-3">
+                <div>
+                  <h4 className="font-medium text-sm">Seed Admin & Users Data</h4>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Membuat operators, users, conversations, messages, dan templates
+                  </p>
+                </div>
+                <div className="text-xs space-y-1 text-gray-600 bg-gray-50 p-3 rounded">
+                  <p>• <strong>2 operators</strong>: Admin & Operator</p>
+                  <p>• <strong>3 users</strong>: 2 WhatsApp, 1 Telegram</p>
+                  <p>• <strong>3 conversations</strong> dengan berbagai status</p>
+                  <p>• <strong>4 messages</strong> sample</p>
+                  <p>• <strong>3 templates</strong> pesan</p>
+                </div>
+                <div className="rounded-md bg-red-50 p-2 border border-red-200">
+                  <p className="text-xs text-red-700">
+                    <strong>⚠️ WARNING:</strong> Ini akan MENGHAPUS semua data existing sebelum seeding!
+                  </p>
+                </div>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => handleSeed('admin')}
+                  disabled={seeding === 'admin'}
+                  className="w-full"
+                >
+                  {seeding === 'admin' ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      Seeding...
+                    </>
+                  ) : (
+                    <>
+                      <Database className="h-4 w-4 mr-2" />
+                      Seed Admin Data
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            {/* Result Display */}
+            {seedResult && (
+              <div className={`p-4 rounded-lg border ${
+                seedResult.success
+                  ? 'bg-green-50 border-green-200'
+                  : 'bg-red-50 border-red-200'
+              }`}>
+                <p className={`text-sm font-medium ${
+                  seedResult.success ? 'text-green-800' : 'text-red-800'
+                }`}>
+                  {seedResult.success ? '✅' : '❌'} {seedResult.message}
+                </p>
+                {seedResult.data && (
+                  <pre className="mt-2 text-xs bg-white p-2 rounded overflow-auto">
+                    {JSON.stringify(seedResult.data, null, 2)}
+                  </pre>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

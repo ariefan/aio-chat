@@ -61,13 +61,26 @@ interface MemberDetail {
   strategyTone: string | null
 }
 
+interface SegmentationData {
+  personaCode: string
+  personaName: string
+  confidenceScore: number
+  paymentProbability: number
+  painPoints: string[]
+  motivators: string[]
+  riskLevel: 'low' | 'medium' | 'high' | 'critical'
+  recommendedStrategy: string
+}
+
 export default function MemberDetailPage() {
   const params = useParams()
   const router = useRouter()
   const memberId = params.id as string
 
   const [member, setMember] = useState<MemberDetail | null>(null)
+  const [segmentation, setSegmentation] = useState<SegmentationData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loadingSegmentation, setLoadingSegmentation] = useState(false)
 
   const fetchData = async () => {
     setLoading(true)
@@ -83,9 +96,26 @@ export default function MemberDetailPage() {
     setLoading(false)
   }
 
+  const fetchSegmentation = async () => {
+    setLoadingSegmentation(true)
+    try {
+      const res = await fetch(`/api/members/${memberId}/segmentation`)
+      if (res.ok) {
+        const result = await res.json()
+        if (result.success && result.data) {
+          setSegmentation(result.data)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch segmentation:', error)
+    }
+    setLoadingSegmentation(false)
+  }
+
   useEffect(() => {
     if (memberId) {
       fetchData()
+      fetchSegmentation()
     }
   }, [memberId])
 
@@ -202,6 +232,14 @@ export default function MemberDetailPage() {
                     <div>
                       <label className="text-sm text-gray-500">Kelas</label>
                       <p><Badge variant="outline">Kelas {member.memberClass}</Badge></p>
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-500">Pekerjaan</label>
+                      <p>{member.occupation || '-'}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-500">Tanggungan</label>
+                      <p>{member.dependents !== null ? `${member.dependents} jiwa` : '-'}</p>
                     </div>
                     <div>
                       <label className="text-sm text-gray-500">Status</label>
@@ -460,6 +498,127 @@ export default function MemberDetailPage() {
                           Mulai Simulasi RICH
                         </Button>
                       </>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Behavioral Persona (Segmentation) */}
+                <Card className={segmentation ? 'border-blue-200' : ''}>
+                  <CardHeader className={segmentation ? 'bg-blue-50' : ''}>
+                    <CardTitle className="flex items-center gap-2">
+                      <Target className="h-5 w-5" />
+                      Persona Perilaku (PANDAWA)
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4 pt-6">
+                    {loadingSegmentation ? (
+                      <div className="flex justify-center py-8">
+                        <RefreshCw className="h-6 w-6 animate-spin text-blue-500" />
+                      </div>
+                    ) : segmentation ? (
+                      <>
+                        {/* Persona Badge */}
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <label className="text-sm text-gray-500">Persona</label>
+                            <Badge className="mt-1 text-sm px-3 py-1" variant={
+                              segmentation.riskLevel === 'critical' ? 'destructive' :
+                              segmentation.riskLevel === 'high' ? 'destructive' :
+                              segmentation.riskLevel === 'medium' ? 'default' : 'secondary'
+                            }>
+                              {segmentation.personaName}
+                            </Badge>
+                          </div>
+                          <Badge variant="outline" className={
+                            segmentation.riskLevel === 'critical' ? 'bg-red-50 text-red-700 border-red-200' :
+                            segmentation.riskLevel === 'high' ? 'bg-orange-50 text-orange-700 border-orange-200' :
+                            segmentation.riskLevel === 'medium' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
+                            'bg-green-50 text-green-700 border-green-200'
+                          }>
+                            Risiko: {segmentation.riskLevel.toUpperCase()}
+                          </Badge>
+                        </div>
+
+                        {/* Confidence & Payment Probability */}
+                        <div className="space-y-3">
+                          <div>
+                            <div className="flex justify-between text-sm mb-1">
+                              <span className="text-gray-500">Skor Keyakinan</span>
+                              <span className="font-medium">{(segmentation.confidenceScore * 100).toFixed(0)}%</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div
+                                className="bg-blue-500 h-2 rounded-full transition-all"
+                                style={{ width: `${segmentation.confidenceScore * 100}%` }}
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <div className="flex justify-between text-sm mb-1">
+                              <span className="text-gray-500">Probabilitas Bayar</span>
+                              <span className="font-medium">{(segmentation.paymentProbability * 100).toFixed(0)}%</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div
+                                className={`h-2 rounded-full transition-all ${
+                                  segmentation.paymentProbability >= 0.7 ? 'bg-green-500' :
+                                  segmentation.paymentProbability >= 0.4 ? 'bg-yellow-500' : 'bg-red-500'
+                                }`}
+                                style={{ width: `${segmentation.paymentProbability * 100}%` }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Pain Points */}
+                        {segmentation.painPoints && segmentation.painPoints.length > 0 && (
+                          <div>
+                            <label className="text-sm text-gray-500 block mb-2">Pain Points</label>
+                            <div className="flex flex-wrap gap-2">
+                              {segmentation.painPoints.map((point, idx) => (
+                                <Badge key={idx} variant="outline" className="bg-red-50 text-red-700 border-red-200 text-xs">
+                                  {point}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Motivators */}
+                        {segmentation.motivators && segmentation.motivators.length > 0 && (
+                          <div>
+                            <label className="text-sm text-gray-500 block mb-2">Motivator</label>
+                            <div className="flex flex-wrap gap-2">
+                              {segmentation.motivators.map((motivator, idx) => (
+                                <Badge key={idx} variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">
+                                  {motivator}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Recommended Strategy */}
+                        {segmentation.recommendedStrategy && (
+                          <div className="p-3 bg-blue-50 rounded-lg">
+                            <label className="text-sm text-blue-700 font-medium block mb-1">Strategi Disarankan</label>
+                            <p className="text-sm text-gray-700">{segmentation.recommendedStrategy}</p>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="text-center py-6">
+                        <p className="text-gray-500 text-sm mb-4">Segmentasi belum tersedia</p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={fetchSegmentation}
+                          disabled={loadingSegmentation}
+                        >
+                          <RefreshCw className={`h-4 w-4 mr-2 ${loadingSegmentation ? 'animate-spin' : ''}`} />
+                          Generate Segmentation
+                        </Button>
+                      </div>
                     )}
                   </CardContent>
                 </Card>

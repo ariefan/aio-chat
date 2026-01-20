@@ -9,7 +9,6 @@ import {
   LogOut,
   Bot,
   LayoutDashboard,
-  FileText,
   Settings,
   Bell,
 } from 'lucide-react'
@@ -20,7 +19,6 @@ const menuItems = [
   { icon: MessageCircle, label: 'Percakapan', href: '/dashboard/conversations' },
   { icon: Bell, label: 'Proaktif', href: '/dashboard/proactive' },
   { icon: Bot, label: 'Simulasi', href: '/dashboard/simulation' },
-  { icon: FileText, label: 'Laporan', href: '/dashboard/reports', disabled: true },
   { icon: Settings, label: 'Pengaturan', href: '/dashboard/settings' },
 ]
 

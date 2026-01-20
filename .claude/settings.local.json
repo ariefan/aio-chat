@@ -34,7 +34,12 @@
       "Bash(pnpm build:*)",
       "Bash(for:*)",
       "Bash(do echo:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(pnpm db:generate:*)",
+      "Bash(pnpm db:push)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:postgres@localhost:5432/aio-chat\" pnpm db:push:*)",
+      "Bash(psql:*)",
+      "Bash(pnpm scheduler:run:*)"
     ],
     "deny": [],
     "ask": []

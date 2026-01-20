@@ -15,8 +15,8 @@ export type MemberStatus = 'active' | 'inactive' | 'suspended';
 export type DebtStatus = 'active' | 'partial' | 'paid' | 'overdue' | 'written_off';
 export type MessageStatus = 'pending' | 'sent' | 'failed' | 'delivered' | 'read' | 'cancelled';
 export type UserStatus = 'pending' | 'verified' | 'active' | 'inactive';
-export type PlatformType = 'whatsapp' | 'telegram';
-export type ConversationStatus = 'active' | 'closed' | 'archived';
+export type PlatformType = 'whatsapp' | 'telegram' | 'email';
+export type ConversationStatus = 'pending' | 'active' | 'closed' | 'archived';
 
 export type StatusBadgeType = 'member' | 'debt' | 'message' | 'user' | 'platform' | 'conversation';
 
@@ -137,8 +137,16 @@ const statusConfig: Record<
     label: 'TG',
     className: 'bg-blue-500 text-white border-blue-600',
   },
+  'platform-email': {
+    label: 'Email',
+    className: 'bg-gray-500 text-white border-gray-600',
+  },
 
   // Conversation statuses
+  'conversation-pending': {
+    label: 'Menunggu',
+    className: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+  },
   'conversation-active': {
     label: 'Aktif',
     className: 'bg-green-100 text-green-800 border-green-200',

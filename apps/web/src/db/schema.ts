@@ -17,11 +17,11 @@ import {
 const createTable = pgTableCreator((name) => `aio_chat_${name}`)
 
 // Enums
-export const platformTypeEnum = pgEnum('platform_type', ['whatsapp', 'telegram'])
+export const platformTypeEnum = pgEnum('platform_type', ['whatsapp', 'telegram', 'email'])
 export const messageDirectionEnum = pgEnum('message_direction', ['inbound', 'outbound'])
-export const messageStatusEnum = pgEnum('message_status', ['sent', 'delivered', 'read', 'failed'])
+export const messageStatusEnum = pgEnum('message_status', ['pending', 'sent', 'delivered', 'read', 'failed'])
 export const userStatusEnum = pgEnum('user_status', ['pending', 'verified', 'active', 'inactive'])
-export const conversationStatusEnum = pgEnum('conversation_status', ['active', 'closed', 'archived'])
+export const conversationStatusEnum = pgEnum('conversation_status', ['pending', 'active', 'closed', 'archived'])
 export const operatorRoleEnum = pgEnum('operator_role', ['admin', 'operator'])
 
 // BPJS Debt Enums
