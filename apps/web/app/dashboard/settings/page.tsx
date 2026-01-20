@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui'
 import { Button } from '@workspace/ui/src/components/button'
 import { DashboardLayout } from '@/components/dashboard/layout'
-import { Save, RefreshCw, Bot, MessageSquare, Sparkles, Database, AlertTriangle } from 'lucide-react'
+import { Save, RefreshCw, Bot, MessageSquare, Sparkles, Database, AlertTriangle, BookOpen } from 'lucide-react'
 import { Combobox, ComboboxOption } from '@workspace/ui'
 
 // Top 10 LLM Models for POC Chatbot
@@ -179,12 +179,16 @@ export default function SettingsPage() {
     }
   }
 
-  const handleSeed = async (type: 'bpjs' | 'admin') => {
+  const handleSeed = async (type: 'bpjs' | 'admin' | 'knowledge') => {
     setSeeding(type)
     setSeedResult(null)
 
     try {
-      const endpoint = type === 'bpjs' ? '/api/bpjs/seed' : '/api/admin/seed'
+      const endpoint = type === 'bpjs'
+        ? '/api/bpjs/seed'
+        : type === 'knowledge'
+        ? '/api/knowledge/seed'
+        : '/api/admin/seed'
       const res = await fetch(endpoint, { method: 'POST' })
 
       const result = await res.json()
@@ -415,6 +419,46 @@ export default function SettingsPage() {
                     <>
                       <Database className="h-4 w-4 mr-2" />
                       Seed Admin Data
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {/* BPJS Knowledge Base Seed */}
+              <div className="p-4 border rounded-lg space-y-3">
+                <div>
+                  <h4 className="font-medium text-sm">Seed BPJS Knowledge Base</h4>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Migrasi 33 entry BPJS dari constants.ts (Pembayaran, Autodebet, REHAB, dll)
+                  </p>
+                </div>
+                <div className="text-xs space-y-1 text-gray-600 bg-gray-50 p-3 rounded">
+                  <p>• <strong>10 entries</strong>: BPJS-specific knowledge base</p>
+                  <p>• <strong>6 categories</strong>: Pembayaran, Autodebet, Kepesertaan, REHAB, Mobile JKN, Kebijakan</p>
+                  <p>• <strong>Persona-based</strong>: Adaptive untuk setiap persona PANDAWA</p>
+                  <p>• <strong>FAQs included</strong>: Jawaban untuk pertanyaan umum</p>
+                </div>
+                <div className="rounded-md bg-blue-50 p-2 border border-blue-200">
+                  <p className="text-xs text-blue-700">
+                    <strong>ℹ️ INFO:</strong> Ini akan MENGHAPUS semua KB entries existing dan mengganti dengan BPJS KB.
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleSeed('knowledge')}
+                  disabled={seeding === 'knowledge'}
+                  className="w-full"
+                >
+                  {seeding === 'knowledge' ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      Seeding...
+                    </>
+                  ) : (
+                    <>
+                      <BookOpen className="h-4 w-4 mr-2" />
+                      Seed BPJS Knowledge Base
                     </>
                   )}
                 </Button>

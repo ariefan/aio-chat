@@ -11,6 +11,7 @@
  * - Smart context windowing
  */
 
+import { GoogleGenerativeAI } from '@google/generative-ai'
 import { db } from '@/db'
 import { bpjsMembers, bpjsDebts, users, customerStrategies, pandawaKnowledgeBase } from '@/db/schema'
 import { eq, and, desc, or } from 'drizzle-orm'
@@ -33,7 +34,7 @@ import {
 // AI Provider Configuration
 // =============================================================================
 
-type AIProvider = 'openrouter' | 'togetherai'
+type AIProvider = 'google' | 'openrouter' | 'togetherai'
 
 interface AIProviderConfig {
   baseUrl: string
@@ -43,8 +44,25 @@ interface AIProviderConfig {
 }
 
 function getAIConfig(): AIProviderConfig {
-  const provider = (process.env.AI_PROVIDER || 'openrouter') as AIProvider
+  const provider = (process.env.AI_PROVIDER || 'google') as AIProvider
 
+  // PRIORITY 1: Google GenAI (NEW - using official SDK)
+  if (provider === 'google') {
+    const apiKey = process.env.GOOGLE_AI_API_KEY || process.env.AI_API_KEY || ''
+    if (!apiKey) {
+      throw new Error('GOOGLE_AI_API_KEY or AI_API_KEY is required for Google GenAI')
+    }
+    return {
+      baseUrl: 'https://generativelanguage.googleapis.com', // Not used for SDK, but for config consistency
+      model: process.env.GOOGLE_AI_MODEL || 'gemini-2.5-flash-exp', // Use latest fast model
+      apiKey,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    }
+  }
+
+  // PRIORITY 2: TogetherAI (fallback)
   if (provider === 'togetherai') {
     const apiKey = process.env.AI_API_KEY || ''
     if (!apiKey) {
@@ -61,7 +79,7 @@ function getAIConfig(): AIProviderConfig {
     }
   }
 
-  // Default: OpenRouter
+  // PRIORITY 3: OpenRouter (legacy fallback)
   const apiKey = process.env.AI_API_KEY || ''
   if (!apiKey) {
     throw new Error('AI_API_KEY is required for OpenRouter')
@@ -550,6 +568,67 @@ export function formatDebtInfo(memberInfo: BpjsMemberInfo): string {
 // =============================================================================
 
 /**
+ * Generate response using Google GenAI SDK
+ * Uses official Google SDK with better performance and reliability
+ */
+async function generateGoogleGenAIResponse(
+  messages: Array<{ role: string; content: string }>,
+  temperature: number,
+  maxTokens: number
+): Promise<{ response: string; model: string; tokensUsed?: number }> {
+  const config = getAIConfig()
+
+  try {
+    // Initialize Google GenAI client
+    const genAI = new GoogleGenerativeAI(config.apiKey)
+    const model = genAI.getGenerativeModel({
+      model: config.model,
+      generationConfig: {
+        temperature,
+        maxOutputTokens: maxTokens,
+      },
+    })
+
+    // Convert messages to Google format
+    // Google GenAI uses: user + systemInstruction
+    const systemMessage = messages.find(m => m.role === 'system')
+    const conversationHistory = messages.filter(m => m.role !== 'system')
+
+    // Build chat history
+    const history = conversationHistory.slice(0, -1).map(msg => ({
+      role: msg.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: msg.content }],
+    }))
+
+    // Get last user message
+    const lastMessage = conversationHistory[conversationHistory.length - 1]
+    if (!lastMessage || lastMessage.role !== 'user') {
+      throw new Error('Last message must be from user')
+    }
+
+    // Start chat with history
+    const chat = model.startChat({
+      history,
+      systemInstruction: systemMessage?.content,
+    })
+
+    // Send message
+    const result = await chat.sendMessage(lastMessage.content)
+    const response = result.response.text()
+    const tokensUsed = result.response.usageMetadata?.totalTokenCount
+
+    return {
+      response,
+      model: config.model,
+      tokensUsed,
+    }
+  } catch (error) {
+    console.error('Google GenAI Error:', error)
+    throw error
+  }
+}
+
+/**
  * Generate chat completion using configured AI provider
  */
 export async function generateJennyResponse(
@@ -612,31 +691,74 @@ export async function generateJennyResponse(
     // Add current message
     messages.push({ role: 'user', content: userMessage })
 
-    // Make API request
-    const response = await fetch(`${config.baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: config.headers,
-      body: JSON.stringify({
-        model: config.model,
-        messages,
-        temperature,
-        max_tokens: maxTokens,
-      }),
-    })
+    // Check which AI provider to use
+    const provider = (process.env.AI_PROVIDER || 'google') as AIProvider
 
-    if (!response.ok) {
-      const error = await response.text()
-      console.error('AI API error:', error)
-      throw new Error(`AI API error: ${response.status}`)
+    let aiResponse: string
+    let modelUsed: string
+    let tokensUsed: number | undefined
+
+    // Use Google GenAI SDK if configured (PRIORITY)
+    if (provider === 'google') {
+      try {
+        const result = await generateGoogleGenAIResponse(messages, temperature, maxTokens)
+        aiResponse = result.response
+        modelUsed = result.model
+        tokensUsed = result.tokensUsed
+      } catch (googleError) {
+        console.error('Google GenAI failed, falling back to HTTP API:', googleError)
+        // Fallback to HTTP API if SDK fails
+        const response = await fetch(`${config.baseUrl}/chat/completions`, {
+          method: 'POST',
+          headers: config.headers,
+          body: JSON.stringify({
+            model: config.model,
+            messages,
+            temperature,
+            max_tokens: maxTokens,
+          }),
+        })
+
+        if (!response.ok) {
+          const error = await response.text()
+          console.error('AI API error:', error)
+          throw new Error(`AI API error: ${response.status}`)
+        }
+
+        const data = await response.json()
+        aiResponse = data.choices?.[0]?.message?.content || 'Maaf, terjadi kesalahan. Silakan coba lagi.'
+        modelUsed = config.model
+        tokensUsed = data.usage?.total_tokens
+      }
+    } else {
+      // Use HTTP API for OpenRouter/TogetherAI
+      const response = await fetch(`${config.baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: config.headers,
+        body: JSON.stringify({
+          model: config.model,
+          messages,
+          temperature,
+          max_tokens: maxTokens,
+        }),
+      })
+
+      if (!response.ok) {
+        const error = await response.text()
+        console.error('AI API error:', error)
+        throw new Error(`AI API error: ${response.status}`)
+      }
+
+      const data = await response.json()
+      aiResponse = data.choices?.[0]?.message?.content || 'Maaf, terjadi kesalahan. Silakan coba lagi.'
+      modelUsed = config.model
+      tokensUsed = data.usage?.total_tokens
     }
-
-    const data = await response.json()
-    const aiResponse = data.choices?.[0]?.message?.content || 'Maaf, terjadi kesalahan. Silakan coba lagi.'
 
     return {
       response: aiResponse,
-      model: config.model,
-      tokensUsed: data.usage?.total_tokens,
+      model: modelUsed,
+      tokensUsed,
       memberInfo: memberInfo || undefined,
     }
 

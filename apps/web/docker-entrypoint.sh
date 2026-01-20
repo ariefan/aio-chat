@@ -3,6 +3,7 @@
 # Docker Entrypoint Script
 # =============================================================================
 # Runs DB migrations before starting the application
+# Can also run scheduler in daemon mode if SCHEDULER_MODE=daemon
 # =============================================================================
 
 set -e
@@ -56,6 +57,17 @@ if [ -n "$DATABASE_URL" ]; then
     }
     echo "✅ Migrations complete!"
   fi
+fi
+
+# =============================================================================
+# SCHEDULER MODE
+# =============================================================================
+if [ "$SCHEDULER_MODE" = "daemon" ]; then
+  echo "📅 Starting PROACTIVE MESSAGE SCHEDULER in daemon mode..."
+  echo "   - Will run every hour at minute 0"
+  echo "   - Press Ctrl+C to stop"
+  cd /app/apps/web
+  exec pnpm scheduler:daemon
 fi
 
 # Start the application
