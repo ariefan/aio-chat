@@ -39,7 +39,20 @@
       "Bash(pnpm db:push)",
       "Bash(DATABASE_URL=\"postgresql://postgres:postgres@localhost:5432/aio-chat\" pnpm db:push:*)",
       "Bash(psql:*)",
-      "Bash(pnpm scheduler:run:*)"
+      "Bash(pnpm scheduler:run:*)",
+      "Bash(pnpm add:*)",
+      "Bash(\"http://194.31.53.215:3000/api/application.all\")",
+      "Bash(\"http://194.31.53.215:3000/api/docker.getContainers\")",
+      "Bash(\"http://194.31.53.215:3000/api/settings.getOpenApiDocument\")",
+      "Bash(\"http://194.31.53.215:3000/api/project.all\")",
+      "Bash(\"http://194.31.53.215:3000/api/application.saveGithubProvider\" )",
+      "Bash(\"http://194.31.53.215:3000/api/application.saveGitProvider\" )",
+      "Bash(\"http://194.31.53.215:3000/api/application.saveEnvironment\" )",
+      "Bash(\"http://194.31.53.215:3000/api/application.saveBuildType\" )",
+      "Bash(\"http://194.31.53.215:3000/api/application.update\" )",
+      "Bash(\"http://194.31.53.215:3000/api/application.deploy\" )",
+      "Bash(\"http://194.31.53.215:3000/api/application.one?applicationId=FwATZLOSNogto6L_f6Y3Y\")",
+      "Bash(\"tail -n 50 /etc/dokploy/logs/aio-chat-scheduler-ds91f7/aio-chat-scheduler-ds91f7-2026-01-20:05:24:01.log 2>&1\")"
     ],
     "deny": [],
     "ask": []

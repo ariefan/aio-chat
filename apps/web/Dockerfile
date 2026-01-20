@@ -59,6 +59,9 @@ RUN adduser --system --uid 1001 nextjs
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
 COPY --from=builder /app/apps/web/public ./apps/web/public
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
+# Copy scheduler source files and node_modules for daemon mode
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/src ./apps/web/src
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/node_modules ./apps/web/node_modules
 
 # Copy entrypoint script
 COPY --chmod=755 apps/web/docker-entrypoint.sh /docker-entrypoint.sh
