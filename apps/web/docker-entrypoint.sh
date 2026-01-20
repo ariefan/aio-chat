@@ -68,9 +68,9 @@ if [ "$SCHEDULER_MODE" = "daemon" ]; then
   echo "📅 Starting PROACTIVE MESSAGE SCHEDULER in daemon mode..."
   echo "   - Will run every hour at minute 0"
   # Start scheduler in background
-  node src/lib/scheduler/scheduler-daemon.js &
+  node src/lib/scheduler/scheduler-daemon.js > /tmp/scheduler.log 2>&1 &
   SCHEDULER_PID=$!
-  echo "✅ Scheduler started (PID: $SCHEDULER_PID)"
+  echo "✅ Scheduler started (PID: $SCHEDULER_PID, logs in /tmp/scheduler.log)"
 fi
 
 # Start the application
