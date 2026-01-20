@@ -67,8 +67,8 @@ if [ "$SCHEDULER_MODE" = "daemon" ]; then
   echo "   - Will run every hour at minute 0"
   echo "   - Press Ctrl+C to stop"
   cd /app/apps/web
-  # Use tsx to run the TypeScript scheduler script
-  exec npx tsx src/lib/scheduler/run-scheduler.ts --daemon
+  # Use node to run the simple JS scheduler daemon
+  exec node src/lib/scheduler/scheduler-daemon.js
 fi
 
 # Start the application
