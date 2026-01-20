@@ -60,15 +60,17 @@ if [ -n "$DATABASE_URL" ]; then
 fi
 
 # =============================================================================
-# SCHEDULER MODE
+# SCHEDULER MODE - Run scheduler alongside web server
 # =============================================================================
+cd /app/apps/web
+
 if [ "$SCHEDULER_MODE" = "daemon" ]; then
   echo "📅 Starting PROACTIVE MESSAGE SCHEDULER in daemon mode..."
   echo "   - Will run every hour at minute 0"
-  echo "   - Press Ctrl+C to stop"
-  cd /app/apps/web
-  # Use node to run the simple JS scheduler daemon
-  exec node src/lib/scheduler/scheduler-daemon.js
+  # Start scheduler in background
+  node src/lib/scheduler/scheduler-daemon.js &
+  SCHEDULER_PID=$!
+  echo "✅ Scheduler started (PID: $SCHEDULER_PID)"
 fi
 
 # Start the application
