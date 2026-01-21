@@ -59,8 +59,6 @@ RUN adduser --system --uid 1001 nextjs
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
 COPY --from=builder /app/apps/web/public ./apps/web/public
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
-# Copy scheduler daemon file (runtime deps already in standalone build)
-COPY --from=builder --chown=nextjs:nodejs /app/apps/web/src/lib/scheduler/scheduler-daemon.js ./apps/web/src/lib/scheduler/scheduler-daemon.js
 
 # Copy entrypoint script
 COPY --chmod=755 apps/web/docker-entrypoint.sh /docker-entrypoint.sh
