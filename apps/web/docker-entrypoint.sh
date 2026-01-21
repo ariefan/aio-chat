@@ -60,17 +60,15 @@ if [ -n "$DATABASE_URL" ]; then
 fi
 
 # =============================================================================
-# SCHEDULER MODE - Run scheduler alongside web server
+# SCHEDULER MODE
 # =============================================================================
-cd /app/apps/web
-
 if [ "$SCHEDULER_MODE" = "daemon" ]; then
   echo "📅 Starting PROACTIVE MESSAGE SCHEDULER in daemon mode..."
   echo "   - Will run every hour at minute 0"
-  # Start scheduler in background
-  node src/lib/scheduler/scheduler-daemon.js &
-  SCHEDULER_PID=$!
-  echo "✅ Scheduler started (PID: $SCHEDULER_PID)"
+  echo "   - Press Ctrl+C to stop"
+  cd /app/apps/web
+  # Use tsx to run the TypeScript scheduler script
+  exec npx tsx src/lib/scheduler/run-scheduler.ts --daemon
 fi
 
 # Start the application
