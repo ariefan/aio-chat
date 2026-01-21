@@ -67,10 +67,15 @@ cd /app/apps/web
 if [ "$SCHEDULER_MODE" = "daemon" ]; then
   echo "📅 Starting PROACTIVE MESSAGE SCHEDULER in daemon mode..."
   echo "   - Will run every hour at minute 0"
-  # Start scheduler in background
-  node src/lib/scheduler/scheduler-daemon.js > /tmp/scheduler.log 2>&1 &
-  SCHEDULER_PID=$!
-  echo "✅ Scheduler started (PID: $SCHEDULER_PID, logs in /tmp/scheduler.log)"
+  # Check if scheduler file exists before starting
+  if [ -f "src/lib/scheduler/scheduler-daemon.js" ]; then
+    # Start scheduler in background
+    node src/lib/scheduler/scheduler-daemon.js > /tmp/scheduler.log 2>&1 &
+    SCHEDULER_PID=$!
+    echo "✅ Scheduler started (PID: $SCHEDULER_PID, logs in /tmp/scheduler.log)"
+  else
+    echo "⚠️  Scheduler file not found, skipping scheduler..."
+  fi
 fi
 
 # Start the application
